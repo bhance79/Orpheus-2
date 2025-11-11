@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Orpheus 2.0</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script defer src="{{ url_for('static', filename='app.js') }}"></script>
+  </head>
+  <body>
+    <div class="container">
+    <header class="top-bar">
+      <div class="user-info">
+        {% if user_image %}
+          <img src="{{ user_image }}" alt="{{ user_name }}" class="profile-pic">
+        {% endif %}
+        <h1>
+          <a href="{{ url_for('index') }}" class="home-link">Welcome back, {{ user_name or 'User' }}</a>
+        </h1>
+      </div>
+
+      {% if playlists %}
+        <a href="{{ url_for('logout') }}" class="btn btn-secondary logout-btn">Logout</a>
+      {% endif %}
+    </header>
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <div class="flash" role="status" aria-live="polite">
+            {% for message in messages %}
+              <div class="flash-item">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {% if not playlists %}
+        <p><a href="{{ url_for('login') }}" class="btn">Login with Spotify</a></p>
+      {% else %}
+
+        <!-- View Tracks -->
+        <form id="view-tracks-form" class="inline-form" method="post" action="{{ url_for('select') }}">
+          <label for="playlist_id">Select one of your playlists:</label>
+          <div class="form-row">
+            <select name="playlist_id" id="playlist_id" required>
+              {% for playlist in owned_playlists %}
+                <option value="{{ playlist.id }}"
+                  {% if playlist.name|lower == default_playlist|lower %}selected{% endif %}>
+                  {{ playlist.name }}
+                </option>
+              {% endfor %}
+            </select>
+
+            <button type="submit" class="btn">View Tracks</button>
+            <!-- Add this button -->
+            <button id="remove-duplicates-btn" type="button" class="btn btn-secondary">Remove Duplicates</button>
+          </div>
+        </form>
+
+        <!-- Inline results (AJAX-rendered) -->
+        <div id="tracks-card" class="card hidden" aria-live="polite"></div>
+        
+        <hr>
+        <section id="filter-tools">
+        <!-- Filter Sweep -->
+        <h2>Filter Sweep</h2>
+        <p class="muted">
+          Remove from <strong>playlist A</strong> (must be owned by you) any tracks that also appear in
+          one or more <strong>playlist B</strong> selections.
+        </p>
+
+        <form id="filter-sweep-form" method="post" action="{{ url_for('filter_sweep') }}">
+          <label for="playlist_a_id">Playlist A:</label>
+          <select name="playlist_a_id" id="playlist_a_id" required>
+            {% for playlist in owned_playlists %}
+              <option value="{{ playlist.id }}"
+                {% if playlist.name|lower == default_playlist|lower %}selected{% endif %}>
+                {{ playlist.name }}
+              </option>
+            {% endfor %}
+          </select>
+
+          <div class="label-row">
+            <label for="playlist_b_id">Playlist B (reference — select one or more):</label>
+            <div class="label-actions">
+              <span id="playlist-b-count" class="pill" aria-live="polite">0 selected</span>
+              <button type="button" class="btn btn-secondary xsmall-btn deselect-all-btn">Deselect All</button>
+            </div>
+          </div>
+
+          <select name="playlist_b_id" id="playlist_b_id" multiple size="10" required>
+            {% for playlist in playlists %}
+              <option value="{{ playlist.id }}">{{ playlist.name }}</option>
+            {% endfor %}
+          </select>
+
+          <button id="filter-sweep-submit" type="submit" class="btn btn-accent">Run Filter Sweep</button>
+        </form></section>
+      {% endif %}
+    </div>
+
+    <!-- Sweeping overlay -->
+    <div id="sweep-overlay" class="overlay" aria-hidden="true">
+      <div class="overlay-content" role="alert" aria-live="assertive">
+        <div class="spinner" aria-hidden="true"></div>
+        <div class="overlay-text">Loading...</div>
+      </div>
+    </div>
+  </body>
+</html>

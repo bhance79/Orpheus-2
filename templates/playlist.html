@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>{{ playlist.name }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; }
+    a { text-decoration: none; }
+    .meta { display: grid; grid-template-columns: 160px 1fr; gap: 1rem; align-items: start; max-width: 960px; }
+    img { width: 160px; height: 160px; object-fit: cover; border-radius: 10px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1.5rem; }
+    th, td { border-bottom: 1px solid #eee; padding: .6rem; text-align: left; }
+    .muted { color: #666; }
+  </style>
+</head>
+<body>
+  <a href="{{ url_for('index') }}">← Back</a>
+  <h1>{{ playlist.name }}</h1>
+
+  <div class="meta">
+    {% if playlist.images and playlist.images[0] %}
+      <img src="{{ playlist.images[0].url }}" alt="Cover" />
+    {% endif %}
+    <div>
+      <p><strong>Owner:</strong> {{ playlist.owner.display_name or playlist.owner.id }}</p>
+      <p><strong>Tracks:</strong> {{ playlist.tracks.total }}</p>
+      <p><a href="{{ playlist.external_urls.spotify }}" target="_blank">Open in Spotify</a></p>
+    </div>
+  </div>
+
+  {% if tracks and tracks|length %}
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Track</th>
+          <th>Artists</th>
+          <th>Album</th>
+          <th>Added</th>
+          <th class="muted">Explicit</th>
+          <th class="muted">Duration</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in tracks %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td><a href="{{ t.url }}" target="_blank">{{ t.name }}</a></td>
+            <td>{{ t.artists }}</td>
+            <td>{{ t.album }}</td>
+            <td>{{ t.added_at[:10] if t.added_at }}</td>
+            <td class="muted">{{ '✔' if t.explicit else '' }}</td>
+            <td class="muted">
+              {% set mins = (t.duration_ms // 60000) if t.duration_ms else 0 %}
+              {% set secs = ((t.duration_ms % 60000) // 1000) if t.duration_ms else 0 %}
+              {{ "%d:%02d"|format(mins, secs) }}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No tracks found.</p>
+  {% endif %}
+</body>
+</html>

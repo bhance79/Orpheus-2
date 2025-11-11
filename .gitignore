@@ -1,20 +1,17 @@
-# Environment variables
-.env
-
-# Virtual environment
-venv/
-
-# Python cache / build files
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.sqlite3
+*.db
 
-# IDE / editor settings
-.vscode/
-.idea/
+# Virtual environment
+venv/
+.env
 
-# macOS / Windows junk
+# Spotipy cache
+.spotipy_cache
+
+# OS files
 .DS_Store
 Thumbs.db

@@ -1,4 +1,4 @@
-# 🎧 Orpheus 2.0
+# Orpheus 2.0
 
 **Orpheus 2.0** is a Spotify-powered playlist management app built with Flask and Spotipy.  
 It allows you to log in with your Spotify account, view and manage your playlists, clean up duplicates, and perform intelligent “filter sweeps” between playlists — all from a clean and responsive interface.
@@ -6,28 +6,28 @@ It allows you to log in with your Spotify account, view and manage your playlist
 **Home Page**
 ![Home Page](static/screenshots/home-view.PNG)
 
-## 🚀 Features
+## Features
 
-### 🧩 Playlist Tools
+### Playlist Tools
 - **View any playlist** you own or follow
 - **See track details** (title, artist, album, explicit, added date)
 
-### 🧹 Smart Cleaning
+### Smart Cleaning
 - **Remove Duplicates** — detects true duplicates even if names differ slightly (e.g. “Song Name – Remastered 2011” vs “Song Name”)
 - **Filter Sweep** — remove songs from Playlist A that appear in one or more Playlist B selections
 
-### 🎧 Recently Played
+### Recently Played
 - View your **Recently Played** tracks via the Spotify API (requires `user-read-recently-played` scope)
 - Treated like a pseudo-playlist in the interface
 
-### 🖼️ UI & Usability
+### UI & Usability
 - Responsive layout that scales with window size (no horizontal scroll)
 - Playlist cover image and owner info aligned neatly beside the title
 - Profile picture and “Welcome” header that link back home
 - AJAX-driven updates — no page reloads when viewing playlists
 - Accessibility-friendly flash messaging and ARIA labels
 
-## 📸 Screenshots
+## Screenshots
 **Log in Page**
 ![Log In](static/screenshots/log-in.PNG)
 
@@ -41,7 +41,7 @@ It allows you to log in with your Spotify account, view and manage your playlist
 ![Filter Sweep](static/screenshots/filter-sweep.PNG)
 
 
-## 🧰 Tech Stack
+## Tech Stack
 
 - **Python 3.9+**
 - **Flask** – web framework  
@@ -51,7 +51,7 @@ It allows you to log in with your Spotify account, view and manage your playlist
 
 ---
 
-## 🔐 Spotify API Setup
+## Spotify API Setup
 
 You’ll need a Spotify Developer App to get credentials.
 
@@ -76,7 +76,7 @@ FLASK_SECRET_KEY=your_random_secret_key
 
 ---
 
-## 🏗️ Installation
+## Installation
 
 Clone and set up dependencies:
 
@@ -90,7 +90,7 @@ pip install -r requirements.txt
 
 ---
 
-## 🧪 Running the App
+## Running the App
 
 Start the Flask development server:
 
@@ -108,29 +108,29 @@ Click **Login with Spotify** and authorize the app.
 
 ---
 
-## 🧭 Usage
+## Usage
 
-### 🏠 Home Screen
+### Home Screen
 
 * Shows your Spotify profile picture and name
 * Dropdowns for selecting playlists
 * Option to **View Tracks** or **Remove Duplicates**
 * Filter Sweep tools below (optional)
 
-### 📄 Playlist View
+### Playlist View
 
 * Displays track list with titles, artists, albums, and links
 * Automatically sorted A→Z
 * Shows playlist cover art next to title
 * Displays “by {user}” aligned with title
 
-### 🧹 Filter Sweep
+### Filter Sweep
 
 * Select **Playlist A** (must be owned by you)
 * Select one or more **Playlist B** entries (reference playlists)
 * Removes any overlapping tracks from Playlist A
 
-### 🧱 Remove Duplicates
+### Remove Duplicates
 
 * Click “Remove Duplicates” on any owned playlist
 * The app:
@@ -142,7 +142,7 @@ Click **Login with Spotify** and authorize the app.
 
 ---
 
-## ⚠️ Permissions Required
+## Permissions Required
 
 Your Spotify scopes include:
 
@@ -158,7 +158,7 @@ user-read-recently-played
 
 ---
 
-## 🧩 Duplicate Detection Logic (Simplified)
+## Duplicate Detection Logic (Simplified)
 
 Duplicates are detected using **canonicalization**:
 
@@ -179,7 +179,7 @@ Final key:
 Tracks with the same key are grouped, first kept, others removed.
 
 
-## 🧑‍💻 Development Notes
+## Development Notes
 
 * Flask runs with `debug=True` for development; disable it in production.
 * To avoid 403 on “Recently Played”, ensure your token includes the `user-read-recently-played` scope.
@@ -187,7 +187,7 @@ Tracks with the same key are grouped, first kept, others removed.
 
 ---
 
-## 🧠 Future Enhancements
+## Future Enhancements
 
 * “Merge Playlists” feature (combine A+B without duplicates)
 * “Duration / BPM filters” for advanced curation
@@ -196,6 +196,6 @@ Tracks with the same key are grouped, first kept, others removed.
 
 ---
 
-## 📜 License
+## License
 
 MIT License © 2025 Ivan Rodriguez Ruelas

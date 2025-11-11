@@ -4,7 +4,7 @@
 It allows you to log in with your Spotify account, view and manage your playlists, clean up duplicates, and perform intelligent “filter sweeps” between playlists — all from a clean and responsive interface.
 
 **Home Page**
-![Home Page](static/screenshots/home-view.png)
+![Home Page](static/screenshots/home-view.PNG)
 
 ## 🚀 Features
 

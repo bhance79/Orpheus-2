@@ -3,7 +3,8 @@
 **Orpheus 2.0** is a Spotify-powered playlist management app built with Flask and Spotipy.  
 It allows you to log in with your Spotify account, view and manage your playlists, clean up duplicates, and perform intelligent “filter sweeps” between playlists — all from a clean and responsive interface.
 
----
+**Home Page**
+![Home Page](static/screenshots/home-view.png)
 
 ## 🚀 Features
 
@@ -25,6 +26,19 @@ It allows you to log in with your Spotify account, view and manage your playlist
 - Profile picture and “Welcome” header that link back home
 - AJAX-driven updates — no page reloads when viewing playlists
 - Accessibility-friendly flash messaging and ARIA labels
+
+## 📸 Screenshots
+**Log in Page**
+![Log In](static/screenshots/log-in.PNG)
+
+**Home Page**
+![Home Page](static/screenshots/home-view.PNG)
+
+**Viewing Tracks**
+![Tracks View](static/screenshots/playlists-view.PNG)
+
+**Filter Sweep in action**
+![Filter Sweep](static/screenshots/filter-sweep.PNG)
 
 
 ## 🧰 Tech Stack

@@ -4,25 +4,128 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Orpheus 2.0</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // Tailwind config - lavender/cornflower blue theme
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: '#7B68EE',
+              'primary-hover': '#9D8DF1',
+              'primary-dark': '#5E4FD1',
+              'bg-dark': '#0A0A0F',
+              'bg-card': '#16161D',
+              'bg-elevated': '#1E1E28',
+              'bg-input': '#2D2D3D',
+              'border': '#2D2D3D',
+              'text-primary': '#E8E8F0',
+              'text-secondary': '#A8A8BA',
+              'text-muted': '#70708C',
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- Alpine.js CDN -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Custom styles (we'll gradually migrate these to Tailwind) -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <script defer src="{{ url_for('static', filename='app.js') }}"></script>
   </head>
   <body>
-    <div class="container">
-    <header class="top-bar">
-      <div class="user-info">
-        {% if user_image %}
-          <img src="{{ user_image }}" alt="{{ user_name }}" class="profile-pic">
-        {% endif %}
-        <h1>
-          <a href="{{ url_for('index') }}" class="home-link">Welcome back, {{ user_name or 'User' }}</a>
-        </h1>
-      </div>
+    <!-- Alpine.js app wrapper -->
+    <div x-data="orpheusApp()" x-cloak class="app-layout">
 
       {% if playlists %}
-        <a href="{{ url_for('logout') }}" class="btn btn-secondary logout-btn">Logout</a>
+      <!-- Sidebar Navigation -->
+      <aside class="sidebar"
+             @mouseenter="sidebarExpanded = true"
+             @mouseleave="sidebarExpanded = false"
+             :class="sidebarExpanded ? 'expanded' : ''">
+
+        <!-- Logo/Brand at top -->
+        <div class="sidebar-header">
+          <div class="sidebar-icon">
+            <img src="{{ url_for('static', filename='icons/home-icon-w.png') }}" alt="Orpheus Logo">
+          </div>
+          <div class="sidebar-text">Orpheus</div>
+        </div>
+
+        <!-- Navigation Items -->
+        <nav class="sidebar-nav">
+          <button type="button"
+                  @click="switchView('home')"
+                  :class="currentView === 'home' ? 'active' : ''"
+                  class="sidebar-item">
+            <div class="sidebar-icon">
+              <img src="{{ url_for('static', filename='icons/home-icon-w.png') }}" alt="Dashboard">
+            </div>
+            <div class="sidebar-text">Dashboard</div>
+          </button>
+
+          <button type="button"
+                  @click="switchView('view-tracks')"
+                  :class="currentView === 'view-tracks' ? 'active' : ''"
+                  class="sidebar-item">
+            <div class="sidebar-icon">
+              <img src="{{ url_for('static', filename='icons/playlist-view-w.png') }}" alt="View Tracks">
+            </div>
+            <div class="sidebar-text">View Tracks</div>
+          </button>
+
+          <button type="button"
+                  @click="switchView('remove-duplicates')"
+                  :class="currentView === 'remove-duplicates' ? 'active' : ''"
+                  class="sidebar-item">
+            <div class="sidebar-icon">
+              <img src="{{ url_for('static', filename='icons/remove-dupes-w.png') }}" alt="Remove Duplicates">
+            </div>
+            <div class="sidebar-text">Remove Duplicates</div>
+          </button>
+
+          <button type="button"
+                  @click="switchView('filter-sweep')"
+                  :class="currentView === 'filter-sweep' ? 'active' : ''"
+                  class="sidebar-item">
+            <div class="sidebar-icon">
+              <img src="{{ url_for('static', filename='icons/sweep-icon-w.png') }}" alt="Filter Sweep">
+            </div>
+            <div class="sidebar-text">Filter Sweep</div>
+          </button>
+        </nav>
+
+        <!-- Logout at bottom -->
+        <div class="sidebar-footer">
+          <a href="{{ url_for('logout') }}" class="sidebar-item">
+            <div class="sidebar-icon">
+              <img src="{{ url_for('static', filename='icons/logout-w.png') }}" alt="Logout">
+            </div>
+            <div class="sidebar-text">Logout</div>
+          </a>
+        </div>
+      </aside>
       {% endif %}
-    </header>
+
+      <!-- Main Content Area -->
+      <div class="main-content">
+        <!-- Top Header Card -->
+        <header class="top-bar">
+          <div class="user-info">
+            {% if user_image %}
+              <img src="{{ user_image }}" alt="{{ user_name }}" class="profile-pic">
+            {% endif %}
+            <h1>
+              <!-- Click to go back to home view (client-side navigation) -->
+              <a @click.prevent="switchView('home')" href="{{ url_for('index') }}" class="home-link font-bold cursor-pointer">Welcome back, {{ user_name or 'User' }}</a>
+            </h1>
+          </div>
+        </header>
+
       {% with messages = get_flashed_messages() %}
         {% if messages %}
           <div class="flash" role="status" aria-live="polite">
@@ -34,14 +137,179 @@
       {% endwith %}
 
       {% if not playlists %}
-        <p><a href="{{ url_for('login') }}" class="btn">Login with Spotify</a></p>
+        <div class="container">
+          <p><a href="{{ url_for('login') }}" class="btn">Login with Spotify</a></p>
+        </div>
       {% else %}
 
-        <!-- View Tracks -->
-        <form id="view-tracks-form" class="inline-form" method="post" action="{{ url_for('select') }}">
-          <label for="playlist_id">Select one of your playlists:</label>
-          <div class="form-row">
-            <select name="playlist_id" id="playlist_id" required>
+        <!-- ========== VIEW 1: DASHBOARD (HOME) ========== -->
+        <div x-show="currentView === 'home'" x-transition x-init="loadDashboardStats()" class="view-container">
+          <div class="container">
+            <h2 class="text-2xl font-bold mb-4">Your Music Dashboard</h2>
+
+          <!-- Stats Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            <!-- Stat Card: Total Playlists -->
+            <div class="card">
+              <div class="text-sm text-gray-400 mb-1">Total Playlists</div>
+              <div class="text-3xl font-bold text-primary">{{ playlists|length }}</div>
+            </div>
+
+            <!-- Stat Card: Owned Playlists -->
+            <div class="card">
+              <div class="text-sm text-gray-400 mb-1">Playlists You Own</div>
+              <div class="text-3xl font-bold text-primary">{{ owned_playlists|length }}</div>
+            </div>
+
+            <!-- Stat Card: Quick Action -->
+            <div class="card">
+              <div class="text-sm text-gray-400 mb-2">Quick Actions</div>
+              <div class="grid grid-cols-2 gap-2">
+                <button type="button" @click="switchView('view-tracks')" class="btn btn-secondary small-btn">
+                  View Tracks
+                </button>
+                <button type="button" @click="switchView('remove-duplicates')" class="btn btn-secondary small-btn">
+                  Remove Dupes
+                </button>
+                <button type="button" @click="switchView('filter-sweep')" class="btn btn-secondary small-btn col-span-2">
+                  Filter Sweep
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Two Column Layout for Stats -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+            <!-- Top Artists -->
+            <div class="card">
+              <h3 class="text-lg font-semibold mb-3">Top Artists (Last 4 Weeks)</h3>
+              <div id="top-artists-list" class="space-y-3">
+                <div class="text-sm text-gray-400">Loading...</div>
+              </div>
+            </div>
+
+            <!-- Top Tracks -->
+            <div class="card">
+              <h3 class="text-lg font-semibold mb-3">Top Tracks (Last 4 Weeks)</h3>
+              <div id="top-tracks-list" class="space-y-2">
+                <div class="text-sm text-gray-400">Loading...</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recently Played -->
+          <div class="card mb-6">
+            <h3 class="text-lg font-semibold mb-3">Recently Played</h3>
+            <div id="recently-played-list" class="space-y-2">
+              <div class="text-sm text-gray-400">Loading...</div>
+            </div>
+          </div>
+
+        <!-- ========== VIEW 2: VIEW TRACKS ========== -->
+        <div x-show="currentView === 'view-tracks'" x-transition class="view-container">
+          <div class="container">
+            <h2 class="text-xl font-bold mb-4">View Playlist Tracks</h2>
+
+          <!-- Playlist Selection Form -->
+          <form id="view-tracks-form" class="inline-form" method="post" action="{{ url_for('select') }}">
+            <label for="playlist_id">Select a playlist:</label>
+            <div class="form-row">
+              <select name="playlist_id" id="playlist_id" required>
+                <option value="__recent__">Recently Played</option>
+                {% for playlist in owned_playlists %}
+                  <option value="{{ playlist.id }}"
+                    {% if playlist.name|lower == default_playlist|lower %}selected{% endif %}>
+                    {{ playlist.name }}
+                  </option>
+                {% endfor %}
+              </select>
+
+              <button type="submit" class="btn">Load Tracks</button>
+            </div>
+          </form>
+
+            <!-- Track Results -->
+            <div id="tracks-card" class="card hidden" aria-live="polite"></div>
+          </div>
+        </div>
+
+        <!-- ========== VIEW 3: REMOVE DUPLICATES ========== -->
+        <div x-show="currentView === 'remove-duplicates'" x-transition class="view-container">
+          <div class="container">
+            <h2 class="text-xl font-bold mb-2">Remove Duplicate Tracks</h2>
+          <p class="muted mb-4">
+            Check your playlists for duplicate tracks and remove them. Only playlists you own can be modified.
+          </p>
+
+          <!-- Step 1: Select Playlist -->
+          <div id="duplicate-check-form" class="mb-6">
+            <label for="duplicate_playlist_id">Select a playlist to check:</label>
+            <div class="form-row">
+              <select id="duplicate_playlist_id" required>
+                <option value="">-- Choose a playlist --</option>
+                {% for playlist in owned_playlists %}
+                  <option value="{{ playlist.id }}">{{ playlist.name }}</option>
+                {% endfor %}
+              </select>
+              <button type="button" id="check-duplicates-btn" class="btn">Check for Duplicates</button>
+            </div>
+          </div>
+
+          <!-- Step 2: Show Results -->
+          <div id="duplicate-results" class="hidden">
+            <!-- No duplicates message -->
+            <div id="no-duplicates-msg" class="card hidden">
+              <div class="flex items-center gap-3">
+                <div class="text-4xl">✓</div>
+                <div>
+                  <h3 class="text-lg font-semibold text-green-400">No Duplicates Found!</h3>
+                  <p class="muted">This playlist is clean - no duplicate tracks detected.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Duplicates found -->
+            <div id="duplicates-found" class="hidden">
+              <div class="card mb-4">
+                <div class="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 class="text-lg font-semibold text-yellow-400">Duplicates Found</h3>
+                    <p class="muted">Found <strong id="duplicate-count">0</strong> duplicate track(s) in this playlist.</p>
+                  </div>
+                </div>
+
+                <!-- Duplicate tracks list -->
+                <div id="duplicate-tracks-list" class="space-y-2 mb-4">
+                  <!-- Will be populated by JavaScript -->
+                </div>
+
+                <!-- Action buttons -->
+                <div class="flex gap-3 border-t border-gray-700 pt-4">
+                  <button type="button" id="confirm-remove-duplicates" class="btn btn-accent">
+                    Remove All Duplicates
+                  </button>
+                  <button type="button" @click="switchView('home')" class="btn btn-secondary">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
+        </div>
+
+        <!-- ========== VIEW 4: FILTER SWEEP ========== -->
+        <div x-show="currentView === 'filter-sweep'" x-transition class="view-container">
+          <div class="container">
+            <h2 class="text-xl font-bold mb-2">Filter Sweep</h2>
+          <p class="muted mb-4">
+            Remove from <strong>playlist A</strong> (must be owned by you) any tracks that also appear in
+            one or more <strong>playlist B</strong> selections.
+          </p>
+
+          <form id="filter-sweep-form" method="post" action="{{ url_for('filter_sweep') }}">
+            <label for="playlist_a_id">Playlist A (Source):</label>
+            <select name="playlist_a_id" id="playlist_a_id" required>
               {% for playlist in owned_playlists %}
                 <option value="{{ playlist.id }}"
                   {% if playlist.name|lower == default_playlist|lower %}selected{% endif %}>
@@ -50,53 +318,28 @@
               {% endfor %}
             </select>
 
-            <button type="submit" class="btn">View Tracks</button>
-            <!-- Add this button -->
-            <button id="remove-duplicates-btn" type="button" class="btn btn-secondary">Remove Duplicates</button>
-          </div>
-        </form>
-
-        <!-- Inline results (AJAX-rendered) -->
-        <div id="tracks-card" class="card hidden" aria-live="polite"></div>
-        
-        <hr>
-        <section id="filter-tools">
-        <!-- Filter Sweep -->
-        <h2>Filter Sweep</h2>
-        <p class="muted">
-          Remove from <strong>playlist A</strong> (must be owned by you) any tracks that also appear in
-          one or more <strong>playlist B</strong> selections.
-        </p>
-
-        <form id="filter-sweep-form" method="post" action="{{ url_for('filter_sweep') }}">
-          <label for="playlist_a_id">Playlist A:</label>
-          <select name="playlist_a_id" id="playlist_a_id" required>
-            {% for playlist in owned_playlists %}
-              <option value="{{ playlist.id }}"
-                {% if playlist.name|lower == default_playlist|lower %}selected{% endif %}>
-                {{ playlist.name }}
-              </option>
-            {% endfor %}
-          </select>
-
-          <div class="label-row">
-            <label for="playlist_b_id">Playlist B (reference — select one or more):</label>
-            <div class="label-actions">
-              <span id="playlist-b-count" class="pill" aria-live="polite">0 selected</span>
-              <button type="button" class="btn btn-secondary xsmall-btn deselect-all-btn">Deselect All</button>
+            <div class="label-row">
+              <label for="playlist_b_id">Playlist B (Reference — select one or more):</label>
+              <div class="label-actions">
+                <span id="playlist-b-count" class="pill" aria-live="polite">0 selected</span>
+                <button type="button" class="btn btn-secondary xsmall-btn deselect-all-btn">Deselect All</button>
+              </div>
             </div>
+
+            <select name="playlist_b_id" id="playlist_b_id" multiple size="10" required>
+              {% for playlist in playlists %}
+                <option value="{{ playlist.id }}">{{ playlist.name }}</option>
+              {% endfor %}
+            </select>
+
+            <button id="filter-sweep-submit" type="submit" class="btn btn-accent">Run Filter Sweep</button>
+          </form>
           </div>
+        </div>
 
-          <select name="playlist_b_id" id="playlist_b_id" multiple size="10" required>
-            {% for playlist in playlists %}
-              <option value="{{ playlist.id }}">{{ playlist.name }}</option>
-            {% endfor %}
-          </select>
-
-          <button id="filter-sweep-submit" type="submit" class="btn btn-accent">Run Filter Sweep</button>
-        </form></section>
       {% endif %}
-    </div>
+      </div> <!-- Close main-content -->
+    </div> <!-- Close app-layout -->
 
     <!-- Sweeping overlay -->
     <div id="sweep-overlay" class="overlay" aria-hidden="true">
@@ -105,5 +348,115 @@
         <div class="overlay-text">Loading...</div>
       </div>
     </div>
+
+    <!-- Alpine.js Component Logic -->
+    <script>
+      function orpheusApp() {
+        return {
+          currentView: 'home', // Default view: 'home', 'view-tracks', 'remove-duplicates', 'filter-sweep'
+          statsLoaded: false,
+          sidebarExpanded: false,
+
+          switchView(viewName) {
+            this.currentView = viewName;
+            // Scroll to top when switching views
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          },
+
+          selectPlaylistAndView(playlistId) {
+            // Switch to view-tracks view
+            this.switchView('view-tracks');
+
+            // Wait for view to render, then set playlist and trigger form
+            setTimeout(() => {
+              const select = document.getElementById('playlist_id');
+              const form = document.getElementById('view-tracks-form');
+              if (select && form) {
+                select.value = playlistId;
+                form.dispatchEvent(new Event('submit'));
+              }
+            }, 100);
+          },
+
+          async loadDashboardStats() {
+            if (this.statsLoaded) return; // Only load once
+
+            try {
+              const res = await fetch('/api/user-stats');
+              const data = await res.json();
+
+              if (!data.ok) {
+                console.error('Failed to load stats:', data.error);
+                return;
+              }
+
+              // Render Top Artists
+              const topArtistsList = document.getElementById('top-artists-list');
+              if (topArtistsList && data.top_artists) {
+                topArtistsList.innerHTML = data.top_artists.map(artist => `
+                  <div class="flex items-center gap-3">
+                    ${artist.image ? `<img src="${artist.image}" alt="${artist.name}" class="w-12 h-12 rounded-full object-cover">` : '<div class="w-12 h-12 rounded-full bg-gray-700"></div>'}
+                    <div class="flex-1">
+                      <div class="font-medium">
+                        <a href="${artist.url}" target="_blank" class="hover:text-primary">${artist.name}</a>
+                      </div>
+                      ${artist.genres && artist.genres.length > 0 ? `<div class="text-xs text-gray-400">${artist.genres.join(', ')}</div>` : ''}
+                    </div>
+                  </div>
+                `).join('');
+              }
+
+              // Render Top Tracks
+              const topTracksList = document.getElementById('top-tracks-list');
+              if (topTracksList && data.top_tracks) {
+                topTracksList.innerHTML = data.top_tracks.map((track, index) => `
+                  <div class="flex items-center gap-2 p-2 hover:bg-gray-800 rounded">
+                    <div class="text-sm text-gray-400 w-6">${index + 1}.</div>
+                    <div class="flex-1">
+                      <div class="font-medium">
+                        <a href="${track.url}" target="_blank" class="hover:text-primary">${track.name}</a>
+                      </div>
+                      <div class="text-sm text-gray-400">${track.artists}</div>
+                    </div>
+                  </div>
+                `).join('');
+              }
+
+              // Render Recently Played
+              const recentlyPlayedList = document.getElementById('recently-played-list');
+              if (recentlyPlayedList && data.recently_played) {
+                recentlyPlayedList.innerHTML = data.recently_played.slice(0, 5).map(track => `
+                  <div class="flex items-center justify-between p-2 hover:bg-gray-800 rounded">
+                    <div class="flex-1">
+                      <div class="font-medium">
+                        <a href="${track.url}" target="_blank" class="hover:text-primary">${track.name}</a>
+                      </div>
+                      <div class="text-sm text-gray-400">${track.artists}</div>
+                    </div>
+                  </div>
+                `).join('');
+              }
+
+              this.statsLoaded = true;
+            } catch (err) {
+              console.error('Error loading stats:', err);
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- Add Alpine.js cloak style to prevent flash of unstyled content -->
+    <style>
+      [x-cloak] { display: none !important; }
+    </style>
+
+    <!-- Icon Attribution Footer -->
+    <footer class="icon-attribution">
+      <div class="attribution-text">
+        Logout Icon made by 
+        <a href="https://icons8.com/icon/VTOU0AOwSnkY/logout">Icons8</a>
+      </div>
+    </footer>
   </body>
 </html>

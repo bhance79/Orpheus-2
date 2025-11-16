@@ -34,13 +34,14 @@ app.secret_key = getenv_stripped("FLASK_SECRET_KEY") or "dev-key-change-me"
 
 RECENT_ID = "__recent__"  # synthetic id for Recently Played
 
-# READ + WRITE scopes (Filter Sweep + Recently Played)
+# READ + WRITE scopes (Filter Sweep + Recently Played + Top Artists/Tracks)
 SCOPES = " ".join([
     "playlist-read-private",
     "playlist-read-collaborative",
     "playlist-modify-private",
     "playlist-modify-public",
     "user-read-recently-played",
+    "user-top-read",  # For top artists and tracks
 ])
 
 # ---------- Spotify OAuth ----------
@@ -293,6 +294,74 @@ def select():
         flash(f"Failed to load playlist: {e}")
         return redirect(url_for("index"))
 
+# --- Check duplicates (API) - PREVIEW only, doesn't remove ---
+@app.route("/api/check-duplicates/<playlist_id>", methods=["GET"])
+def api_check_duplicates(playlist_id):
+    """
+    Check for duplicate songs without removing them.
+    Returns: { ok, has_duplicates, duplicate_count, duplicates: [...] }
+    """
+    if "token_info" not in session:
+        return jsonify({"ok": False, "error": "not_authenticated"}), 401
+    try:
+        sp = get_sp()
+
+        # Ensure ownership
+        try:
+            if not user_owns_playlist(sp, playlist_id):
+                return jsonify({"ok": False, "error": "playlist_not_owned"}), 403
+        except Exception:
+            return jsonify({"ok": False, "error": "ownership_check_failed"}), 400
+
+        items = playlist_items_with_positions(sp, playlist_id)
+
+        # Group by canonical (title + artists)
+        groups: Dict[str, List[Tuple[int, str, str, str]]] = {}
+        for idx, it in enumerate(items):
+            tr = (it or {}).get("track") or {}
+            if not tr:
+                continue
+            uri = tr.get("uri")
+            name = tr.get("name") or ""
+            artists_list = tr.get("artists") or []
+            if not uri:
+                continue
+            key = canonical_title(name) + "||" + canonical_artists(artists_list)
+            groups.setdefault(key, []).append((
+                idx, uri, name, ", ".join(a.get("name", "") for a in artists_list)
+            ))
+
+        # Find duplicates
+        duplicates = []
+        total_duplicates = 0
+        for key, occurrences in groups.items():
+            if len(occurrences) <= 1:
+                continue
+            occurrences.sort(key=lambda t: t[0])
+            keep = occurrences[0]
+            dups = occurrences[1:]
+            total_duplicates += len(dups)
+            duplicates.append({
+                "track_name": keep[2],
+                "artists": keep[3],
+                "total_occurrences": len(occurrences),
+                "duplicates_to_remove": len(dups),
+            })
+
+        pl = sp.playlist(playlist_id)
+        return jsonify({
+            "ok": True,
+            "has_duplicates": len(duplicates) > 0,
+            "duplicate_count": total_duplicates,
+            "playlist_name": pl.get("name", ""),
+            "duplicates": duplicates
+        })
+
+    except SpotifyException as e:
+        return jsonify({"ok": False, "error": f"spotify_error:{e}"}), 500
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 # --- Remove duplicates (API) ---
 @app.route("/api/remove-duplicates/<playlist_id>", methods=["POST"])
 def api_remove_duplicates(playlist_id):
@@ -517,6 +586,66 @@ def filter_sweep():
     except Exception as e:
         flash(f"Filter Sweep failed: {e}")
         return redirect(url_for("index"))
+
+@app.route("/api/user-stats")
+def api_user_stats():
+    """
+    Get user statistics: top artists, top tracks, recently played
+    Returns: { ok, top_artists, top_tracks, recently_played }
+    """
+    if "token_info" not in session:
+        return jsonify({"ok": False, "error": "not_authenticated"}), 401
+    try:
+        sp = get_sp()
+
+        # Top Artists (last 4 weeks)
+        top_artists_data = sp.current_user_top_artists(limit=5, time_range='short_term') or {}
+        top_artists = []
+        for artist in (top_artists_data.get('items') or []):
+            images = artist.get('images') or []
+            top_artists.append({
+                'name': artist.get('name'),
+                'url': (artist.get('external_urls') or {}).get('spotify'),
+                'image': images[0].get('url') if images else None,
+                'genres': artist.get('genres', [])[:3],  # First 3 genres
+            })
+
+        # Top Tracks (last 4 weeks)
+        top_tracks_data = sp.current_user_top_tracks(limit=5, time_range='short_term') or {}
+        top_tracks = []
+        for track in (top_tracks_data.get('items') or []):
+            artists = track.get('artists') or []
+            top_tracks.append({
+                'name': track.get('name'),
+                'artists': ', '.join(a.get('name', '') for a in artists),
+                'url': (track.get('external_urls') or {}).get('spotify'),
+                'album': (track.get('album') or {}).get('name'),
+            })
+
+        # Recently Played (last 10)
+        recent_data = sp.current_user_recently_played(limit=10) or {}
+        recently_played = []
+        for item in (recent_data.get('items') or []):
+            track = item.get('track') or {}
+            artists = track.get('artists') or []
+            recently_played.append({
+                'name': track.get('name'),
+                'artists': ', '.join(a.get('name', '') for a in artists),
+                'url': (track.get('external_urls') or {}).get('spotify'),
+                'played_at': item.get('played_at'),
+            })
+
+        return jsonify({
+            "ok": True,
+            "top_artists": top_artists,
+            "top_tracks": top_tracks,
+            "recently_played": recently_played,
+        })
+
+    except SpotifyException as e:
+        return jsonify({"ok": False, "error": f"spotify_error:{e}"}), 500
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route("/logout")
 def logout():

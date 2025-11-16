@@ -103,7 +103,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('view-tracks-form');
     const select = document.getElementById('playlist_id');
     const card = document.getElementById('tracks-card');
-    const tools = document.getElementById('filter-tools'); // for hiding sweep UI during view
 
     if (!form || !select || !card) return;
 
@@ -118,14 +117,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderTracks(payload) {
       const { ok, playlist, tracks, error } = payload || {};
       if (!ok) {
-        // keep tools visible on error
+        // keep card visible on error
         card.classList.remove('hidden');
         card.innerHTML = `<div class="flash"><div class="flash-item">Failed to load tracks${error ? `: ${error}` : ''}.</div></div>`;
         return;
       }
 
-      // hide Filter Sweep when viewing tracks
-      if (tools) tools.classList.add('hidden');
+      // No longer need to hide Filter Sweep - Alpine handles view switching now
 
       const cover = playlist.image
         ? `<img src="${playlist.image}" alt="${playlist.name} cover" class="playlist-cover">`
@@ -201,24 +199,32 @@ document.addEventListener('DOMContentLoaded', () => {
   })();
 
   // ==========================================================
-  //                REMOVE DUPLICATES (button)
+  //          REMOVE DUPLICATES VIEW (check + confirm flow)
   // ==========================================================
-  const removeDupBtn = document.getElementById('remove-duplicates-btn');
-  const playlistSelect = document.getElementById('playlist_id');
+  const checkDupBtn = document.getElementById('check-duplicates-btn');
+  const dupPlaylistSelect = document.getElementById('duplicate_playlist_id');
+  const dupResults = document.getElementById('duplicate-results');
+  const noDupsMsg = document.getElementById('no-duplicates-msg');
+  const dupsFound = document.getElementById('duplicates-found');
+  const dupCount = document.getElementById('duplicate-count');
+  const dupTracksList = document.getElementById('duplicate-tracks-list');
+  const confirmRemoveBtn = document.getElementById('confirm-remove-duplicates');
 
-  if (removeDupBtn && playlistSelect) {
-    removeDupBtn.addEventListener('click', async () => {
-      const id = playlistSelect.value;
+  let currentDuplicatePlaylistId = null;
+
+  if (checkDupBtn && dupPlaylistSelect) {
+    checkDupBtn.addEventListener('click', async () => {
+      const id = dupPlaylistSelect.value;
       if (!id) {
         showFlashMessage('Please select a playlist first.');
         return;
       }
 
-      showOverlay('Removing duplicates…');
+      showOverlay('Checking for duplicates…');
+      currentDuplicatePlaylistId = id;
 
       try {
-        const res = await fetch(`/remove-duplicates/${encodeURIComponent(id)}`, {
-          method: 'POST',
+        const res = await fetch(`/api/check-duplicates/${encodeURIComponent(id)}`, {
           headers: { 'Accept': 'application/json' }
         });
         const data = await res.json();
@@ -227,20 +233,75 @@ document.addEventListener('DOMContentLoaded', () => {
           if (data.error === 'playlist_not_owned') {
             showFlashMessage('You do not own this playlist!');
           } else {
-            showFlashMessage(`Remove Duplicates failed: ${data.error || 'Unknown error'}`);
+            showFlashMessage(`Check failed: ${data.error || 'Unknown error'}`);
           }
-        } else {
-          showFlashMessage(`Removed ${data.removed_count || 0} duplicate track(s)${data.playlist_name ? ` from “${data.playlist_name}”` : ''}.`);
+          return;
+        }
 
-          // If tracks are already displayed, refresh the view
-          const tracksCard = document.getElementById('tracks-card');
-          const viewForm = document.getElementById('view-tracks-form');
-          if (tracksCard && viewForm && !tracksCard.classList.contains('hidden')) {
-            viewForm.dispatchEvent(new Event('submit'));
+        // Show results section
+        if (dupResults) dupResults.classList.remove('hidden');
+
+        if (!data.has_duplicates) {
+          // No duplicates found
+          if (noDupsMsg) noDupsMsg.classList.remove('hidden');
+          if (dupsFound) dupsFound.classList.add('hidden');
+        } else {
+          // Duplicates found
+          if (noDupsMsg) noDupsMsg.classList.add('hidden');
+          if (dupsFound) dupsFound.classList.remove('hidden');
+          if (dupCount) dupCount.textContent = data.duplicate_count;
+
+          // Render duplicate tracks list
+          if (dupTracksList) {
+            const html = data.duplicates.map(dup => `
+              <div class="p-3 bg-gray-800 rounded">
+                <div class="font-medium">${dup.track_name}</div>
+                <div class="text-sm text-gray-400">${dup.artists}</div>
+                <div class="text-sm text-yellow-400 mt-1">
+                  Found ${dup.total_occurrences} times (${dup.duplicates_to_remove} duplicate${dup.duplicates_to_remove > 1 ? 's' : ''} will be removed)
+                </div>
+              </div>
+            `).join('');
+            dupTracksList.innerHTML = html;
           }
         }
       } catch (err) {
-        showFlashMessage(`Remove Duplicates failed: ${String(err)}`);
+        showFlashMessage(`Check failed: ${String(err)}`);
+      } finally {
+        hideOverlay();
+      }
+    });
+  }
+
+  // Confirm removal button
+  if (confirmRemoveBtn) {
+    confirmRemoveBtn.addEventListener('click', async () => {
+      if (!currentDuplicatePlaylistId) {
+        showFlashMessage('No playlist selected.');
+        return;
+      }
+
+      showOverlay('Removing duplicates…');
+
+      try {
+        const res = await fetch(`/api/remove-duplicates/${encodeURIComponent(currentDuplicatePlaylistId)}`, {
+          method: 'POST',
+          headers: { 'Accept': 'application/json' }
+        });
+        const data = await res.json();
+
+        if (!data.ok) {
+          showFlashMessage(`Remove failed: ${data.error || 'Unknown error'}`);
+        } else {
+          showFlashMessage(`Successfully removed ${data.removed_count || 0} duplicate track(s) from "${data.playlist_name}".`);
+
+          // Reset the view
+          if (dupResults) dupResults.classList.add('hidden');
+          if (dupPlaylistSelect) dupPlaylistSelect.value = '';
+          currentDuplicatePlaylistId = null;
+        }
+      } catch (err) {
+        showFlashMessage(`Remove failed: ${String(err)}`);
       } finally {
         hideOverlay();
       }

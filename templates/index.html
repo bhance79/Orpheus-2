@@ -113,14 +113,6 @@
 
       <!-- Main Content Area -->
       <div class="main-content">
-        <!-- Top Header Card -->
-        <!-- ALPINE TEST -->
-        <div style="background: blue; color: white; padding: 1rem; margin: 1rem;">
-          <p><strong>Alpine.js Test:</strong></p>
-          <p x-data="{ test: 'Alpine is WORKING!' }" x-text="test"></p>
-          <p>Current view: <span x-text="currentView"></span></p>
-        </div>
-
         <header class="top-bar">
           <div class="user-info">
             {% if user_image %}
@@ -131,8 +123,6 @@
               <a @click.prevent="switchView('home')" href="{{ url_for('index') }}" class="home-link font-bold cursor-pointer">Welcome back, {{ user_name or 'User' }}</a>
             </h1>
           </div>
-          <!-- Debug: Current view -->
-          <div class="text-xs text-yellow-400" x-text="'DEBUG: Current view = ' + currentView"></div>
         </header>
 
       {% with messages = get_flashed_messages() %}
@@ -334,7 +324,6 @@
         <template x-if="currentView === 'remove-duplicates'">
           <div class="view-container">
             <div class="container">
-              <div class="text-xs text-green-400 mb-2">DEBUG: Remove Duplicates is visible</div>
               <h2 class="text-xl font-bold mb-2">Remove Duplicate Tracks</h2>
           <p class="muted mb-4">
             Check your playlists for duplicate tracks and remove them. Only playlists you own can be modified.
@@ -401,7 +390,6 @@
         <template x-if="currentView === 'filter-sweep'">
           <div class="view-container">
           <div class="container">
-            <div class="text-xs text-green-400 mb-2">DEBUG: Filter Sweep is visible</div>
             <h2 class="text-xl font-bold mb-2">Filter Sweep</h2>
           <p class="muted mb-4">
             Remove from <strong>playlist A</strong> (must be owned by you) any tracks that also appear in
@@ -553,9 +541,7 @@
           modalTitle: '',
 
           switchView(viewName) {
-            console.log('Switching to view:', viewName);
             this.currentView = viewName;
-            console.log('Current view is now:', this.currentView);
             // Scroll to top when switching views
             window.scrollTo({ top: 0, behavior: 'smooth' });
           },

@@ -114,6 +114,13 @@
       <!-- Main Content Area -->
       <div class="main-content">
         <!-- Top Header Card -->
+        <!-- ALPINE TEST -->
+        <div style="background: blue; color: white; padding: 1rem; margin: 1rem;">
+          <p><strong>Alpine.js Test:</strong></p>
+          <p x-data="{ test: 'Alpine is WORKING!' }" x-text="test"></p>
+          <p>Current view: <span x-text="currentView"></span></p>
+        </div>
+
         <header class="top-bar">
           <div class="user-info">
             {% if user_image %}
@@ -124,6 +131,8 @@
               <a @click.prevent="switchView('home')" href="{{ url_for('index') }}" class="home-link font-bold cursor-pointer">Welcome back, {{ user_name or 'User' }}</a>
             </h1>
           </div>
+          <!-- Debug: Current view -->
+          <div class="text-xs text-yellow-400" x-text="'DEBUG: Current view = ' + currentView"></div>
         </header>
 
       {% with messages = get_flashed_messages() %}
@@ -143,100 +152,190 @@
       {% else %}
 
         <!-- ========== VIEW 1: DASHBOARD (HOME) ========== -->
-        <div x-show="currentView === 'home'" x-transition x-init="loadDashboardStats()" class="view-container">
+        <template x-if="currentView === 'home'">
+          <div x-init="loadDashboardStats()" class="view-container">
           <div class="container">
             <h2 class="text-2xl font-bold mb-4">Your Music Dashboard</h2>
 
-          <!-- Stats Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            <!-- Stat Card: Total Playlists -->
-            <div class="card">
-              <div class="text-sm text-gray-400 mb-1">Total Playlists</div>
-              <div class="text-3xl font-bold text-primary">{{ playlists|length }}</div>
+          <!-- Featured Top Artists Showcase -->
+          <div class="card mb-6 top-artists-card">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+              <div>
+                <div class="text-sm text-gray-400 uppercase tracking-wide">Spotlight</div>
+                <h3 class="text-2xl font-semibold">Your Top Artists</h3>
+                <div class="text-sm text-gray-400">
+                  Range:
+                  <span class="text-white font-semibold" x-text="rangeLabels[activeArtistRange] || ''"></span>
+                </div>
+              </div>
+              <div class="flex flex-col gap-2 items-start sm:items-end">
+                <div class="flex flex-wrap gap-2" role="group" aria-label="Select artist range">
+                  <template x-for="range in rangeOptions" :key="`artist-${range}`">
+                    <button
+                      type="button"
+                      class="px-3 py-1 text-xs font-medium rounded-full border transition"
+                      :class="activeArtistRange === range ? 'bg-primary text-white border-primary' : 'border-gray-600 text-gray-400 hover:text-white'"
+                      @click="setRange('artists', range)"
+                    >
+                      <span x-text="rangeLabels[range] || range"></span>
+                    </button>
+                  </template>
+                </div>
+                <button type="button"
+                        class="link-btn"
+                        :class="!canShowMore('artists') ? 'link-btn--disabled' : ''"
+                        :disabled="!canShowMore('artists')"
+                        @click="openTopModal('artists')">
+                  View full list
+                </button>
+              </div>
             </div>
-
-            <!-- Stat Card: Owned Playlists -->
-            <div class="card">
-              <div class="text-sm text-gray-400 mb-1">Playlists You Own</div>
-              <div class="text-3xl font-bold text-primary">{{ owned_playlists|length }}</div>
-            </div>
-
-            <!-- Stat Card: Quick Action -->
-            <div class="card">
-              <div class="text-sm text-gray-400 mb-2">Quick Actions</div>
-              <div class="grid grid-cols-2 gap-2">
-                <button type="button" @click="switchView('view-tracks')" class="btn btn-secondary small-btn">
-                  View Tracks
-                </button>
-                <button type="button" @click="switchView('remove-duplicates')" class="btn btn-secondary small-btn">
-                  Remove Dupes
-                </button>
-                <button type="button" @click="switchView('filter-sweep')" class="btn btn-secondary small-btn col-span-2">
-                  Filter Sweep
-                </button>
+            <div class="overflow-x-auto pb-2 top-artists-hero">
+              <div id="top-artists-hero" class="flex gap-6 min-w-max">
+                <div class="text-sm text-gray-400">Loading your favorites...</div>
               </div>
             </div>
           </div>
 
-          <!-- Two Column Layout for Stats -->
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-            <!-- Top Artists -->
-            <div class="card">
-              <h3 class="text-lg font-semibold mb-3">Top Artists (Last 4 Weeks)</h3>
-              <div id="top-artists-list" class="space-y-3">
-                <div class="text-sm text-gray-400">Loading...</div>
+          <!-- Top Tracks -->
+          <div class="card mb-6">
+            <div class="flex items-center justify-between mb-3 gap-4">
+              <div>
+                <h3 class="text-lg font-semibold">Top Tracks</h3>
+                <div class="text-sm text-gray-400">
+                  Range:
+                  <span class="text-white font-semibold" x-text="rangeLabels[activeTrackRange] || ''"></span>
+                </div>
+              </div>
+              <div class="flex flex-col gap-2 items-start sm:items-end">
+                <div class="flex flex-wrap gap-2" role="group" aria-label="Select track range">
+                  <template x-for="range in rangeOptions" :key="`track-${range}`">
+                    <button
+                      type="button"
+                      class="px-3 py-1 text-xs font-medium rounded-full border transition"
+                      :class="activeTrackRange === range ? 'bg-primary text-white border-primary' : 'border-gray-600 text-gray-400 hover:text-white'"
+                      @click="setRange('tracks', range)"
+                    >
+                      <span x-text="rangeLabels[range] || range"></span>
+                    </button>
+                  </template>
+                </div>
+                <button type="button"
+                        class="link-btn"
+                        :class="!canShowMore('tracks') ? 'link-btn--disabled' : ''"
+                        :disabled="!canShowMore('tracks')"
+                        @click="openTopModal('tracks')">
+                  Show more
+                </button>
               </div>
             </div>
+            <div id="top-tracks-list" class="space-y-2">
+              <div class="text-sm text-gray-400">Loading...</div>
+            </div>
+          </div>
 
-            <!-- Top Tracks -->
-            <div class="card">
-              <h3 class="text-lg font-semibold mb-3">Top Tracks (Last 4 Weeks)</h3>
-              <div id="top-tracks-list" class="space-y-2">
-                <div class="text-sm text-gray-400">Loading...</div>
+          <!-- Top Genres -->
+          <div class="card mb-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+              <div>
+                <h3 class="text-lg font-semibold">Top Genres</h3>
+                <div class="text-sm text-gray-400">
+                  <span x-text="genreSourceLabels[activeGenreSource] || ''"></span>
+                  ·
+                  <span x-text="rangeLabels[activeGenreRange] || ''"></span>
+                </div>
               </div>
+              <div class="flex flex-wrap gap-4">
+                <div>
+                  <div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Source</div>
+                  <div class="flex gap-2">
+                    <template x-for="source in genreSourceOptions" :key="source">
+                      <button
+                        type="button"
+                        class="range-chip"
+                        :class="activeGenreSource === source ? 'range-chip--active' : ''"
+                        @click="setGenreSource(source)"
+                      >
+                        <span x-text="genreSourceLabels[source] || source"></span>
+                      </button>
+                    </template>
+                  </div>
+                </div>
+                <div>
+                  <div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Range</div>
+                  <div class="flex gap-2">
+                    <template x-for="range in genreRangeOptions" :key="`genre-${range}`">
+                      <button
+                        type="button"
+                        class="range-chip"
+                        :class="activeGenreRange === range ? 'range-chip--active' : ''"
+                        @click="setGenreRange(range)"
+                      >
+                        <span x-text="rangeLabels[range] || range"></span>
+                      </button>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="top-genres-chart" class="genre-chart">
+              <div class="text-sm text-gray-400">Loading...</div>
             </div>
           </div>
 
           <!-- Recently Played -->
           <div class="card mb-6">
             <h3 class="text-lg font-semibold mb-3">Recently Played</h3>
-            <div id="recently-played-list" class="space-y-2">
+            <div id="recently-played-list" class="space-y-2 recently-played-scroll">
               <div class="text-sm text-gray-400">Loading...</div>
             </div>
           </div>
+          </div>
+        </template>
 
         <!-- ========== VIEW 2: VIEW TRACKS ========== -->
-        <div x-show="currentView === 'view-tracks'" x-transition class="view-container">
-          <div class="container">
-            <h2 class="text-xl font-bold mb-4">View Playlist Tracks</h2>
-
-          <!-- Playlist Selection Form -->
-          <form id="view-tracks-form" class="inline-form" method="post" action="{{ url_for('select') }}">
-            <label for="playlist_id">Select a playlist:</label>
-            <div class="form-row">
-              <select name="playlist_id" id="playlist_id" required>
-                <option value="__recent__">Recently Played</option>
-                {% for playlist in owned_playlists %}
-                  <option value="{{ playlist.id }}"
-                    {% if playlist.name|lower == default_playlist|lower %}selected{% endif %}>
-                    {{ playlist.name }}
-                  </option>
-                {% endfor %}
-              </select>
-
-              <button type="submit" class="btn">Load Tracks</button>
+        <template x-if="currentView === 'view-tracks'">
+          <div>
+            <div style="background: red; color: white; padding: 1rem; margin: 1rem; border-radius: 8px;">
+              <h2 style="font-size: 1.5rem; font-weight: bold; margin: 0 0 0.5rem 0;">✓ VIEW TRACKS IS VISIBLE</h2>
+              <p style="margin: 0;">This red box confirms the view is rendering correctly.</p>
             </div>
-          </form>
 
-            <!-- Track Results -->
-            <div id="tracks-card" class="card hidden" aria-live="polite"></div>
+            <div class="view-container">
+              <div class="container">
+                <h2 class="text-xl font-bold mb-4">View Playlist Tracks</h2>
+
+                <!-- Playlist Selection Form -->
+                <form id="view-tracks-form" class="inline-form" method="post" action="{{ url_for('select') }}">
+                  <label for="playlist_id">Select a playlist:</label>
+                  <div class="form-row">
+                    <select name="playlist_id" id="playlist_id" required>
+                      <option value="__recent__">Recently Played</option>
+                      {% for playlist in owned_playlists %}
+                        <option value="{{ playlist.id }}"
+                          {% if playlist.name|lower == default_playlist|lower %}selected{% endif %}>
+                          {{ playlist.name }}
+                        </option>
+                      {% endfor %}
+                    </select>
+
+                    <button type="submit" class="btn">Load Tracks</button>
+                  </div>
+                </form>
+
+                <!-- Track Results -->
+                <div id="tracks-card" class="card hidden" aria-live="polite"></div>
+              </div>
+            </div>
           </div>
-        </div>
+        </template>
 
         <!-- ========== VIEW 3: REMOVE DUPLICATES ========== -->
-        <div x-show="currentView === 'remove-duplicates'" x-transition class="view-container">
-          <div class="container">
-            <h2 class="text-xl font-bold mb-2">Remove Duplicate Tracks</h2>
+        <template x-if="currentView === 'remove-duplicates'">
+          <div class="view-container">
+            <div class="container">
+              <div class="text-xs text-green-400 mb-2">DEBUG: Remove Duplicates is visible</div>
+              <h2 class="text-xl font-bold mb-2">Remove Duplicate Tracks</h2>
           <p class="muted mb-4">
             Check your playlists for duplicate tracks and remove them. Only playlists you own can be modified.
           </p>
@@ -296,11 +395,13 @@
             </div>
           </div>
           </div>
-        </div>
+        </template>
 
         <!-- ========== VIEW 4: FILTER SWEEP ========== -->
-        <div x-show="currentView === 'filter-sweep'" x-transition class="view-container">
+        <template x-if="currentView === 'filter-sweep'">
+          <div class="view-container">
           <div class="container">
+            <div class="text-xs text-green-400 mb-2">DEBUG: Filter Sweep is visible</div>
             <h2 class="text-xl font-bold mb-2">Filter Sweep</h2>
           <p class="muted mb-4">
             Remove from <strong>playlist A</strong> (must be owned by you) any tracks that also appear in
@@ -335,11 +436,85 @@
             <button id="filter-sweep-submit" type="submit" class="btn btn-accent">Run Filter Sweep</button>
           </form>
           </div>
-        </div>
+          </div>
+        </template>
 
       {% endif %}
       </div> <!-- Close main-content -->
     </div> <!-- Close app-layout -->
+
+    <!-- Top Items Modal -->
+    <div x-cloak
+         x-show="showTopModal"
+         class="modal-backdrop"
+         @click="closeTopModal()"
+         @keydown.escape.window="closeTopModal()"
+         role="dialog"
+         aria-modal="true">
+      <div class="modal-panel" @click.stop x-transition>
+        <div class="modal-header">
+          <h3 class="modal-title" x-text="modalTitle || 'Top Items'"></h3>
+          <button type="button" class="modal-close" @click="closeTopModal()" aria-label="Close dialog">×</button>
+        </div>
+        <div class="modal-range" x-show="rangeOptions.length > 0">
+          <div class="modal-range-label">Time range:</div>
+          <div class="modal-range-chips">
+            <template x-for="range in rangeOptions" :key="`modal-${range}`">
+              <button
+                type="button"
+                class="range-chip"
+                :class="(modalType === 'artists' ? activeArtistRange : activeTrackRange) === range ? 'range-chip--active' : ''"
+                @click.stop="setRange(modalType || 'artists', range)"
+              >
+                <span x-text="rangeLabels[range] || range"></span>
+              </button>
+            </template>
+          </div>
+        </div>
+        <template x-if="modalItems.length === 0">
+          <div class="text-sm text-gray-400">No data available for this range.</div>
+        </template>
+        <div class="modal-content" x-show="modalItems.length > 0">
+          <div class="modal-list" role="list">
+            <template x-for="(item, index) in modalItems" :key="`${modalType}-${index}`">
+              <div class="modal-list-item" role="listitem">
+                <div class="modal-rank" x-text="index + 1"></div>
+                <div class="modal-body">
+                  <div class="modal-item" x-show="modalType === 'artists'">
+                    <template x-if="item.image">
+                      <img :src="item.image" :alt="item.name" class="modal-avatar">
+                    </template>
+                    <template x-if="!item.image">
+                      <div class="modal-avatar placeholder"></div>
+                    </template>
+                    <div class="modal-info">
+                      <a :href="item.url" target="_blank" rel="noopener" class="modal-link" x-text="item.name"></a>
+                      <div class="modal-subtext" x-text="item.genres && item.genres.length ? item.genres.join(', ') : 'Genre unavailable'"></div>
+                    </div>
+                  </div>
+
+                  <div class="modal-item" x-show="modalType === 'tracks'">
+                    <template x-if="item.cover">
+                      <img :src="item.cover"
+                           :alt="item.name"
+                           class="modal-track-cover">
+                    </template>
+                    <template x-if="!item.cover">
+                      <div class="modal-track-cover placeholder"></div>
+                    </template>
+                    <div class="modal-info">
+                      <a :href="item.url" target="_blank" rel="noopener" class="modal-link block truncate" x-text="item.name"></a>
+                      <div class="modal-subtext truncate" x-text="item.artists"></div>
+                      <div class="modal-subtext muted truncate" x-text="item.album || 'Album unavailable'"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Sweeping overlay -->
     <div id="sweep-overlay" class="overlay" aria-hidden="true">
@@ -356,9 +531,31 @@
           currentView: 'home', // Default view: 'home', 'view-tracks', 'remove-duplicates', 'filter-sweep'
           statsLoaded: false,
           sidebarExpanded: false,
+          rangeOptions: ['short_term', 'medium_term', 'long_term'],
+          rangeLabels: {
+            short_term: 'Last 4 Weeks',
+            medium_term: 'Last 6 Months',
+            long_term: 'All Time'
+          },
+          activeArtistRange: 'short_term',
+          activeTrackRange: 'short_term',
+          topArtistsByRange: {},
+          topTracksByRange: {},
+          topGenresBySource: { artists: {}, tracks: {} },
+          genreSourceLabels: { artists: 'Top Artists', tracks: 'Top Tracks' },
+          genreSourceOptions: ['artists', 'tracks'],
+          genreRangeOptions: ['short_term', 'medium_term', 'long_term'],
+          activeGenreSource: 'artists',
+          activeGenreRange: 'short_term',
+          showTopModal: false,
+          modalType: null,
+          modalItems: [],
+          modalTitle: '',
 
           switchView(viewName) {
+            console.log('Switching to view:', viewName);
             this.currentView = viewName;
+            console.log('Current view is now:', this.currentView);
             // Scroll to top when switching views
             window.scrollTo({ top: 0, behavior: 'smooth' });
           },
@@ -378,6 +575,195 @@
             }, 100);
           },
 
+          setRange(type, rangeKey) {
+            if (type === 'artists') {
+              if (this.activeArtistRange === rangeKey) return;
+              this.activeArtistRange = rangeKey;
+              this.renderArtistShowcase();
+            } else if (type === 'tracks') {
+              if (this.activeTrackRange === rangeKey) return;
+              this.activeTrackRange = rangeKey;
+              this.renderTopTracksPreview();
+            }
+            if (this.showTopModal && this.modalType === type) {
+              this.updateModalItems();
+            }
+          },
+
+          canShowMore(type) {
+            const dataMap = type === 'artists' ? this.topArtistsByRange : this.topTracksByRange;
+            const rangeKey = type === 'artists' ? this.activeArtistRange : this.activeTrackRange;
+            const items = dataMap[rangeKey] || [];
+            return items.length > 5;
+          },
+
+          openTopModal(type) {
+            this.modalType = type;
+            this.showTopModal = true;
+            this.updateModalItems();
+            document.body.classList.add('modal-open');
+          },
+
+          closeTopModal() {
+            this.showTopModal = false;
+            this.modalItems = [];
+            this.modalType = null;
+            this.modalTitle = '';
+            document.body.classList.remove('modal-open');
+          },
+
+          updateModalItems() {
+            if (!this.modalType) {
+              this.modalItems = [];
+              this.modalTitle = '';
+              return;
+            }
+            const dataMap = this.modalType === 'artists' ? this.topArtistsByRange : this.topTracksByRange;
+            const rangeKey = this.modalType === 'artists' ? this.activeArtistRange : this.activeTrackRange;
+            const items = dataMap[rangeKey] || [];
+            this.modalItems = items;
+            const label = this.rangeLabels[rangeKey] || rangeKey;
+            this.modalTitle = this.modalType === 'artists'
+              ? `Top Artists — ${label}`
+              : `Top Tracks — ${label}`;
+          },
+
+          setGenreSource(source) {
+            if (this.activeGenreSource === source) return;
+            this.activeGenreSource = source;
+            this.renderGenreChart();
+          },
+
+          setGenreRange(rangeKey) {
+            if (this.activeGenreRange === rangeKey) return;
+            this.activeGenreRange = rangeKey;
+            this.renderGenreChart();
+          },
+
+          renderArtistShowcase() {
+            const artists = this.topArtistsByRange[this.activeArtistRange] || [];
+            const escapeHtml = (value = '') => String(value)
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;');
+
+            const topArtistsHero = document.getElementById('top-artists-hero');
+            if (topArtistsHero) {
+              if (!artists.length) {
+                topArtistsHero.innerHTML = '<div class="text-sm text-gray-400">No artist data available yet.</div>';
+              } else {
+                const heroArtists = artists.slice(0, 15);
+                topArtistsHero.innerHTML = heroArtists.map((artist, index) => {
+                  const primaryGenre = (artist.genres && artist.genres.length > 0) ? artist.genres[0] : null;
+                  const bio = artist.bio || (primaryGenre
+                    ? `${artist.name} is a ${primaryGenre} artist.`
+                    : `${artist.name} is an artist.`);
+                  const safeBio = escapeHtml(bio);
+                  return `
+                    <div class="artist-hero-card flex-shrink-0 w-64 sm:w-72 md:w-80">
+                      <div class="relative w-full aspect-square rounded-3xl overflow-hidden shadow-2xl bg-gray-900">
+                        ${artist.image
+                          ? `<img src="${artist.image}" alt="${artist.name}" class="absolute inset-0 w-full h-full object-cover">`
+                          : '<div class="absolute inset-0 bg-gray-700"></div>'}
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none"></div>
+                        <div class="absolute bottom-3 left-3 text-sm font-semibold text-white bg-black/60 rounded-full px-3 py-1">
+                          #${index + 1}
+                        </div>
+                      </div>
+                      <div class="mt-3">
+                        <div class="font-semibold text-lg text-white truncate">
+                          <a href="${artist.url}" target="_blank" class="hover:text-primary">${artist.name}</a>
+                        </div>
+                        ${primaryGenre
+                          ? `<div class="text-xs uppercase tracking-wide text-primary">${primaryGenre}</div>`
+                          : '<div class="text-xs text-gray-500">Genre unavailable</div>'}
+                        <p class="text-sm text-gray-300 mt-2 leading-snug">${safeBio}</p>
+                      </div>
+                    </div>
+                  `;
+                }).join('');
+              }
+            }
+          },
+
+          renderTopTracksPreview() {
+            const tracks = this.topTracksByRange[this.activeTrackRange] || [];
+            const previewTracks = tracks.slice(0, 5);
+            const topTracksList = document.getElementById('top-tracks-list');
+            if (topTracksList) {
+              if (!previewTracks.length) {
+                topTracksList.innerHTML = '<div class="text-sm text-gray-400">No data available for this range.</div>';
+              } else {
+                topTracksList.innerHTML = previewTracks.map((track, index) => `
+                  <div class="flex items-center gap-3 p-2 hover:bg-gray-800 rounded">
+                    <div class="text-sm text-gray-400 w-6">${index + 1}.</div>
+                    ${track.cover ? `<img src="${track.cover}" alt="${track.name}" class="w-12 h-12 rounded object-cover flex-shrink-0">` : '<div class="w-12 h-12 rounded bg-gray-700 flex-shrink-0"></div>'}
+                    <div class="flex-1 min-w-0">
+                      <div class="font-medium">
+                        <a href="${track.url}" target="_blank" class="hover:text-primary">${track.name}</a>
+                      </div>
+                      <div class="text-sm text-gray-400 truncate">${track.artists}</div>
+                    </div>
+                  </div>
+                `).join('');
+              }
+            }
+          },
+
+          renderGenreChart() {
+            const container = document.getElementById('top-genres-chart');
+            if (!container) return;
+            const sourceData = (this.topGenresBySource && this.topGenresBySource[this.activeGenreSource]) || {};
+            const genres = sourceData[this.activeGenreRange] || [];
+            const escapeHtml = (value = '') => String(value)
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;');
+            if (!genres.length) {
+              container.innerHTML = '<div class="text-sm text-gray-400">Genre data unavailable.</div>';
+              return;
+            }
+
+            const maxPercentage = Math.max(...genres.map(g => g.percentage || 0)) || 1;
+
+            // Create compact hierarchical bar chart
+            container.innerHTML = genres.map((genre, index) => {
+              const percentage = genre.percentage || 0;
+              const width = Math.max((percentage / maxPercentage) * 100, 2);
+              const label = escapeHtml(genre.genre || 'Unknown');
+              const displayPercentage = genre.percentage != null ? `${genre.percentage}%` : '';
+
+              // Color gradient based on ranking
+              const hue = 250 - (index * 10);
+              const saturation = Math.max(70 - (index * 3), 45);
+              const lightness = Math.min(55 + (index * 2), 68);
+
+              // Size-based hierarchy: top genres get larger bars
+              const baseHeight = 32;
+              const heightBonus = Math.max(0, (genres.length - index) * 2);
+              const barHeight = baseHeight + heightBonus;
+
+              return `
+                <div class="genre-bar-row" style="animation-delay: ${index * 0.08}s">
+                  <div class="genre-bar-header">
+                    <div class="genre-bar-rank">${index + 1}</div>
+                    <div class="genre-bar-label">${label}</div>
+                    <div class="genre-bar-value">${displayPercentage}</div>
+                  </div>
+                  <div class="genre-bar-container" style="height: ${barHeight}px">
+                    <div class="genre-bar-fill"
+                         style="width: ${width}%;
+                                background: linear-gradient(90deg,
+                                  hsl(${hue}, ${saturation}%, ${lightness}%) 0%,
+                                  hsl(${hue}, ${saturation}%, ${lightness - 8}%) 100%);
+                                box-shadow: 0 0 20px hsla(${hue}, ${saturation}%, ${lightness}%, 0.4);">
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('');
+          },
+
           async loadDashboardStats() {
             if (this.statsLoaded) return; // Only load once
 
@@ -390,42 +776,40 @@
                 return;
               }
 
-              // Render Top Artists
-              const topArtistsList = document.getElementById('top-artists-list');
-              if (topArtistsList && data.top_artists) {
-                topArtistsList.innerHTML = data.top_artists.map(artist => `
-                  <div class="flex items-center gap-3">
-                    ${artist.image ? `<img src="${artist.image}" alt="${artist.name}" class="w-12 h-12 rounded-full object-cover">` : '<div class="w-12 h-12 rounded-full bg-gray-700"></div>'}
-                    <div class="flex-1">
-                      <div class="font-medium">
-                        <a href="${artist.url}" target="_blank" class="hover:text-primary">${artist.name}</a>
-                      </div>
-                      ${artist.genres && artist.genres.length > 0 ? `<div class="text-xs text-gray-400">${artist.genres.join(', ')}</div>` : ''}
-                    </div>
-                  </div>
-                `).join('');
+              this.topArtistsByRange = data.top_artists || {};
+              this.topTracksByRange = data.top_tracks || {};
+              this.topGenresBySource = data.top_genres || { artists: {}, tracks: {} };
+              this.rangeLabels = data.range_labels || this.rangeLabels;
+              this.rangeOptions = Object.keys(this.topArtistsByRange);
+              if (!this.rangeOptions.length) {
+                this.rangeOptions = ['short_term', 'medium_term', 'long_term'];
               }
+              const preferred = this.rangeOptions.includes('short_term') ? 'short_term' : this.rangeOptions[0];
+              this.activeArtistRange = preferred || 'short_term';
+              this.activeTrackRange = preferred || 'short_term';
+              this.renderArtistShowcase();
+              this.renderTopTracksPreview();
 
-              // Render Top Tracks
-              const topTracksList = document.getElementById('top-tracks-list');
-              if (topTracksList && data.top_tracks) {
-                topTracksList.innerHTML = data.top_tracks.map((track, index) => `
-                  <div class="flex items-center gap-2 p-2 hover:bg-gray-800 rounded">
-                    <div class="text-sm text-gray-400 w-6">${index + 1}.</div>
-                    <div class="flex-1">
-                      <div class="font-medium">
-                        <a href="${track.url}" target="_blank" class="hover:text-primary">${track.name}</a>
-                      </div>
-                      <div class="text-sm text-gray-400">${track.artists}</div>
-                    </div>
-                  </div>
-                `).join('');
+              const artistGenreRanges = Object.keys(this.topGenresBySource.artists || {});
+              const trackGenreRanges = Object.keys(this.topGenresBySource.tracks || {});
+              this.genreRangeOptions = [...new Set([...(artistGenreRanges || []), ...(trackGenreRanges || [])])];
+              if (!this.genreRangeOptions.length) {
+                this.genreRangeOptions = this.rangeOptions.slice();
               }
+              if (!this.genreRangeOptions.includes(this.activeGenreRange)) {
+                this.activeGenreRange = this.genreRangeOptions.includes('short_term')
+                  ? 'short_term'
+                  : (this.genreRangeOptions[0] || 'short_term');
+              }
+              if (!this.genreSourceOptions.includes(this.activeGenreSource)) {
+                this.activeGenreSource = 'artists';
+              }
+              this.renderGenreChart();
 
               // Render Recently Played
               const recentlyPlayedList = document.getElementById('recently-played-list');
               if (recentlyPlayedList && data.recently_played) {
-                recentlyPlayedList.innerHTML = data.recently_played.slice(0, 5).map(track => `
+                recentlyPlayedList.innerHTML = data.recently_played.slice(0, 30).map(track => `
                   <div class="flex items-center justify-between p-2 hover:bg-gray-800 rounded">
                     <div class="flex-1">
                       <div class="font-medium">

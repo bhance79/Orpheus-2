@@ -3,6 +3,7 @@ import os
 import re
 import time
 import base64
+from collections import Counter
 from typing import Dict, Any, Iterable, List, Optional, Tuple
 from pathlib import Path
 
@@ -43,6 +44,89 @@ SCOPES = " ".join([
     "user-read-recently-played",
     "user-top-read",  # For top artists and tracks
 ])
+
+TIME_RANGE_LABELS = {
+    "short_term": "Last 4 Weeks",
+    "medium_term": "Last 6 Months",
+    "long_term": "All Time",
+}
+TIME_RANGE_KEYS: Tuple[str, ...] = tuple(TIME_RANGE_LABELS.keys())
+
+def summarize_genres(top_artists: Dict[str, List[Dict[str, Any]]], range_key: str = "short_term", limit: int = 10) -> List[Dict[str, Any]]:
+    """
+    Build a ranked list of genres based on the artists returned for a specific time range.
+    """
+    artists = top_artists.get(range_key) if isinstance(top_artists, dict) else []
+    counter = Counter()
+    for artist in artists or []:
+        for genre in (artist.get("genres") or []):
+            name = (genre or "").strip()
+            if name:
+                counter[name] += 1
+    total = sum(counter.values())
+    if not total:
+        return []
+    genres = []
+    for genre_name, count in counter.most_common(limit):
+        genres.append({
+            "genre": genre_name.title(),
+            "count": count,
+            "percentage": round((count / total) * 100, 1),
+        })
+    return genres
+
+
+def summarize_genres_from_tracks(top_tracks: Dict[str, List[Dict[str, Any]]], artist_genres: Dict[str, List[str]],
+                                 range_key: str = "short_term", limit: int = 10) -> List[Dict[str, Any]]:
+    tracks = top_tracks.get(range_key) if isinstance(top_tracks, dict) else []
+    counter = Counter()
+    for track in tracks or []:
+        for artist_id in (track.get("artist_ids") or []):
+            for genre in artist_genres.get(artist_id, []):
+                name = (genre or "").strip()
+                if name:
+                    counter[name] += 1
+    total = sum(counter.values())
+    if not total:
+        return []
+    genres = []
+    for genre_name, count in counter.most_common(limit):
+        genres.append({
+            "genre": genre_name.title(),
+            "count": count,
+            "percentage": round((count / total) * 100, 1),
+        })
+    return genres
+
+
+def chunked(seq: Iterable[str], size: int = 50) -> Iterable[List[str]]:
+    seq_list = list(seq or [])
+    for i in range(0, len(seq_list), size):
+        yield seq_list[i:i + size]
+
+
+def build_artist_genre_lookup(sp: spotipy.Spotify, top_artists: Dict[str, List[Dict[str, Any]]],
+                              extra_artist_ids: Iterable[str]) -> Dict[str, List[str]]:
+    """
+    Create a lookup of artist_id -> genres using cached data from top_artists and additional Spotify lookups.
+    """
+    genre_map: Dict[str, List[str]] = {}
+    for artists in (top_artists or {}).values():
+        for artist in artists or []:
+            aid = artist.get("id")
+            if aid and aid not in genre_map:
+                genre_map[aid] = artist.get("genres") or []
+
+    missing_ids = {aid for aid in (extra_artist_ids or []) if aid and aid not in genre_map}
+    for chunk in chunked(missing_ids, 50):
+        if not chunk:
+            continue
+        resp = sp.artists(chunk) or {}
+        for artist in (resp.get("artists") or []):
+            aid = artist.get("id")
+            if aid:
+                genre_map[aid] = artist.get("genres") or []
+    return genre_map
 
 # ---------- Spotify OAuth ----------
 def sp_oauth() -> SpotifyOAuth:
@@ -598,48 +682,103 @@ def api_user_stats():
     try:
         sp = get_sp()
 
-        # Top Artists (last 4 weeks)
-        top_artists_data = sp.current_user_top_artists(limit=5, time_range='short_term') or {}
-        top_artists = []
-        for artist in (top_artists_data.get('items') or []):
-            images = artist.get('images') or []
-            top_artists.append({
-                'name': artist.get('name'),
-                'url': (artist.get('external_urls') or {}).get('spotify'),
-                'image': images[0].get('url') if images else None,
-                'genres': artist.get('genres', [])[:3],  # First 3 genres
-            })
+        def format_artist(artist: Dict[str, Any]) -> Dict[str, Any]:
+            images = artist.get("images") or []
+            name = artist.get("name") or "Unknown Artist"
+            genres = (artist.get("genres") or [])[:3]
+            followers_raw = artist.get("followers") or {}
+            followers_total = followers_raw.get("total") if isinstance(followers_raw, dict) else None
+            popularity = artist.get("popularity")
+            primary_genre = genres[0] if genres else None
 
-        # Top Tracks (last 4 weeks)
-        top_tracks_data = sp.current_user_top_tracks(limit=5, time_range='short_term') or {}
-        top_tracks = []
-        for track in (top_tracks_data.get('items') or []):
-            artists = track.get('artists') or []
-            top_tracks.append({
-                'name': track.get('name'),
-                'artists': ', '.join(a.get('name', '') for a in artists),
-                'url': (track.get('external_urls') or {}).get('spotify'),
-                'album': (track.get('album') or {}).get('name'),
-            })
+            bio_parts = []
+            if primary_genre:
+                bio_parts.append(f"{name} is a {primary_genre} artist")
+            else:
+                bio_parts.append(f"{name} is an artist")
+            if isinstance(followers_total, int) and followers_total > 0:
+                bio_parts.append(f"followed by {followers_total:,} Spotify listeners")
+            if isinstance(popularity, int):
+                bio_parts.append(f"with a popularity score of {popularity}/100")
+            biography = ", ".join(bio_parts).strip()
+            if biography and not biography.endswith("."):
+                biography += "."
 
-        # Recently Played (last 10)
-        recent_data = sp.current_user_recently_played(limit=10) or {}
+            return {
+                "id": artist.get("id"),
+                "name": name,
+                "url": (artist.get("external_urls") or {}).get("spotify"),
+                "image": images[0].get("url") if images else None,
+                "genres": genres,
+                "followers": followers_total,
+                "popularity": popularity,
+                "bio": biography,
+            }
+
+        def format_track(track: Dict[str, Any]) -> Dict[str, Any]:
+            artists = track.get("artists") or []
+            artist_ids = [a.get("id") for a in artists if a.get("id")]
+            album = track.get("album") or {}
+            album_images = album.get("images") or []
+            return {
+                "name": track.get("name"),
+                "artists": ", ".join(a.get("name", "") for a in artists),
+                "url": (track.get("external_urls") or {}).get("spotify"),
+                "album": album.get("name"),
+                "cover": album_images[0].get("url") if album_images else None,
+                "artist_ids": artist_ids,
+            }
+
+        top_artists: Dict[str, List[Dict[str, Any]]] = {}
+        for range_key in TIME_RANGE_KEYS:
+            data = sp.current_user_top_artists(limit=50, time_range=range_key) or {}
+            items = data.get("items") or []
+            top_artists[range_key] = [format_artist(artist) for artist in items if isinstance(artist, dict)]
+
+        top_tracks: Dict[str, List[Dict[str, Any]]] = {}
+        track_artist_ids: List[str] = []
+        for range_key in TIME_RANGE_KEYS:
+            data = sp.current_user_top_tracks(limit=50, time_range=range_key) or {}
+            items = data.get("items") or []
+            formatted_tracks = [format_track(track) for track in items if isinstance(track, dict)]
+            top_tracks[range_key] = formatted_tracks
+            for t in formatted_tracks:
+                track_artist_ids.extend(t.get("artist_ids") or [])
+
+        artist_genre_lookup = build_artist_genre_lookup(sp, top_artists, track_artist_ids)
+
+        top_genres = {
+            "artists": {range_key: summarize_genres(top_artists, range_key) for range_key in TIME_RANGE_KEYS},
+            "tracks": {range_key: summarize_genres_from_tracks(top_tracks, artist_genre_lookup, range_key) for range_key in TIME_RANGE_KEYS},
+        }
+
+        # Recently Played (last 30)
+        recent_data = sp.current_user_recently_played(limit=30) or {}
         recently_played = []
+        recent_total_ms = 0
         for item in (recent_data.get('items') or []):
             track = item.get('track') or {}
             artists = track.get('artists') or []
+            duration_ms = track.get('duration_ms')
+            if isinstance(duration_ms, (int, float)):
+                recent_total_ms += duration_ms
             recently_played.append({
                 'name': track.get('name'),
                 'artists': ', '.join(a.get('name', '') for a in artists),
                 'url': (track.get('external_urls') or {}).get('spotify'),
                 'played_at': item.get('played_at'),
+                'duration_ms': duration_ms,
             })
+        recent_minutes = round(recent_total_ms / 60000) if recent_total_ms else None
 
         return jsonify({
             "ok": True,
             "top_artists": top_artists,
             "top_tracks": top_tracks,
             "recently_played": recently_played,
+            "range_labels": TIME_RANGE_LABELS,
+            "top_genres": top_genres,
+            "recent_minutes_listened": recent_minutes,
         })
 
     except SpotifyException as e:

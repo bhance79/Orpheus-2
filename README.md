@@ -90,6 +90,18 @@ pip install -r requirements.txt
 
 ---
 
+## Running with Docker
+
+`ash
+docker compose up --build
+`
+
+* Builds the image using the included Dockerfile and installs dependencies (including Gunicorn).
+* Mounts .spotipy_cache so Spotify tokens persist between restarts.
+* Serves the app on [http://localhost:5000](http://localhost:5000).
+
+Use docker compose down to stop the container, or docker compose down -v if you also want to clear the cached tokens.
+
 ## Running the App
 
 Start the Flask development server:

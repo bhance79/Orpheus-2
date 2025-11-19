@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.cache/
+.git
+.gitignore
+.vscode/
+.idea/
+.env
+screenshots/
+.spotipy_cache/

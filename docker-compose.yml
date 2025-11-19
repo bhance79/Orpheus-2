@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"   # host:container
+    env_file:
+      - .env          # pass your Spotify secrets into the container
+    environment:
+      FLASK_ENV: production
+      FLASK_DEBUG: 0
+    volumes:
+      - .:/app
+      - ./.spotipy_cache:/app/.spotipy_cache
+    restart: unless-stopped

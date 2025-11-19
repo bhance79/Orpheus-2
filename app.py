@@ -30,7 +30,7 @@ def safe_get(d: Any, key: str, default=None):
     return d.get(key, default) if isinstance(d, dict) else default
 
 # ---------- Flask ----------
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static/dist', static_url_path='')
 app.secret_key = getenv_stripped("FLASK_SECRET_KEY") or "dev-key-change-me"
 
 RECENT_ID = "__recent__"  # synthetic id for Recently Played
@@ -273,37 +273,8 @@ def list_all_playlists(sp: spotipy.Spotify) -> List[Dict[str, Any]]:
 # ---------- Routes ----------
 @app.route("/")
 def index():
-    if "token_info" not in session:
-        return render_template("index.html", playlists=None, owned_playlists=None)
-    try:
-        sp = get_sp()
-        owned = list_owned_playlists(sp)
-        all_pl = list_all_playlists(sp)
-
-        # Inject synthetic "Recently Played" into general list
-        me = sp.me() or {}
-        recent_entry = {
-            "id": RECENT_ID,
-            "name": "Recently Played",
-            "owner": {"id": (me.get("id") or "me")},
-        }
-        all_pl.append(recent_entry)
-
-        # A–Z sort
-        owned.sort(key=lambda p: (p.get("name") or "").lower())
-        all_pl.sort(key=lambda p: (p.get("name") or "").lower())
-
-        return render_template(
-            "index.html",
-            playlists=all_pl,
-            owned_playlists=owned,
-            default_playlist="CRATEDIGGER",
-            user_name=session.get("user_name"),
-            user_image=session.get("user_image")
-        )
-    except Exception as e:
-        flash(str(e))
-        return render_template("index.html", playlists=None, owned_playlists=None)
+    # Serve React app
+    return app.send_static_file("index.html")
 
 @app.route("/login")
 def login():
@@ -671,6 +642,40 @@ def filter_sweep():
         flash(f"Filter Sweep failed: {e}")
         return redirect(url_for("index"))
 
+@app.route("/api/playlists")
+def api_playlists():
+    """
+    Get user's playlists
+    Returns: { ok, playlists, owned_playlists }
+    """
+    if "token_info" not in session:
+        return jsonify({"ok": False, "error": "not_authenticated"}), 401
+    try:
+        sp = get_sp()
+        owned = list_owned_playlists(sp)
+        all_pl = list_all_playlists(sp)
+
+        # Inject synthetic "Recently Played" into general list
+        me = sp.me() or {}
+        recent_entry = {
+            "id": RECENT_ID,
+            "name": "Recently Played",
+            "owner": {"id": (me.get("id") or "me"), "display_name": me.get("display_name") or "You"},
+        }
+        all_pl.append(recent_entry)
+
+        # A–Z sort
+        owned.sort(key=lambda p: (p.get("name") or "").lower())
+        all_pl.sort(key=lambda p: (p.get("name") or "").lower())
+
+        return jsonify({
+            "ok": True,
+            "playlists": all_pl,
+            "owned_playlists": owned
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 @app.route("/api/user-stats")
 def api_user_stats():
     """
@@ -826,6 +831,24 @@ def test_client():
 @app.route("/favicon.ico")
 def favicon():
     return ('', 204)
+
+# Route for old static files (icons, css, js)
+@app.route('/static/<path:path>')
+def send_static(path):
+    from flask import send_from_directory
+    return send_from_directory('static', path)
+
+# Catch-all route for React Router (must be last)
+@app.route('/<path:path>')
+def catch_all(path):
+    # Don't catch API routes or auth routes
+    if path.startswith('api/') or path in ['login', 'callback', 'logout', 'filter-sweep']:
+        return ('Not found', 404)
+    # Try to serve static file from dist, otherwise serve React app
+    try:
+        return app.send_static_file(path)
+    except:
+        return app.send_static_file("index.html")
 
 # ---------- Entrypoint ----------
 if __name__ == "__main__":

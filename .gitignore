@@ -15,3 +15,14 @@ venv/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Node
+node_modules/
+.cache
+
+# Build artifacts
+static/dist/
+
+# IDE
+.vscode/
+.idea/

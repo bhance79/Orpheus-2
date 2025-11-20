@@ -121,7 +121,7 @@ function FilterSweep() {
               Playlist B (Reference — select one or more):
             </label>
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-primary/20 text-primary rounded-full text-xs font-medium">
+              <span className="px-3 py-1 bg-white/10 text-white/80 rounded-full text-xs font-medium">
                 {playlistBList.length} selected
               </span>
               <button type="button" onClick={handleDeselectAll} className="btn btn-secondary text-xs py-1 px-2">

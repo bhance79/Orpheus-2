@@ -16,7 +16,7 @@ function TopTracks({ tracks, activeRange, rangeOptions, rangeLabels, onRangeChan
                 <option key={range} value={range}>{rangeLabels[range] || range}</option>
               ))}
             </select>
-            <button onClick={onShowMore} className="text-xs text-primary hover:text-primary-hover">
+            <button onClick={onShowMore} className="text-xs text-white/80 hover:text-white/60">
               More
             </button>
           </div>
@@ -62,7 +62,7 @@ function TopTracks({ tracks, activeRange, rangeOptions, rangeLabels, onRangeChan
                 type="button"
                 className={`px-3 py-1 text-xs font-medium rounded-full border transition ${
                   activeRange === range
-                    ? 'bg-primary text-white border-primary'
+                    ? 'bg-white/20 text-white border-white/30'
                     : 'border-gray-600 text-gray-400 hover:text-white'
                 }`}
                 onClick={() => onRangeChange(range)}
@@ -96,7 +96,7 @@ function TopTracks({ tracks, activeRange, rangeOptions, rangeLabels, onRangeChan
               )}
               <div className="flex-1 min-w-0">
                 <div className="font-medium">
-                  <a href={track.url} target="_blank" rel="noopener noreferrer" className="hover:text-primary">
+                  <a href={track.url} target="_blank" rel="noopener noreferrer" className="hover:text-white/70">
                     {track.name}
                   </a>
                 </div>

@@ -49,7 +49,7 @@ function TopGenres({ genresData, activeSource, activeRange, rangeOptions, rangeL
                 <div key={index} className="text-xs">
                   <div className="flex justify-between mb-1">
                     <span className="text-gray-300">{index + 1}. {genre.genre}</span>
-                    <span className="text-primary">{genre.percentage}%</span>
+                    <span className="text-white/80">{genre.percentage}%</span>
                   </div>
                   <div className="h-2 bg-bg-input rounded-full overflow-hidden">
                     <div

@@ -10,6 +10,7 @@ import FilterSweep from './pages/FilterSweep'
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(null)
   const [user, setUser] = useState(null)
+  const [statsData, setStatsData] = useState(null)
 
   useEffect(() => {
     // Check authentication status by trying to fetch user stats
@@ -18,7 +19,7 @@ function App() {
       .then(data => {
         if (data.ok) {
           setIsAuthenticated(true)
-          // We don't get user info from this endpoint, but we know they're authenticated
+          setStatsData(data) // Cache the stats data
         } else {
           setIsAuthenticated(false)
         }
@@ -50,7 +51,7 @@ function App() {
     <Router>
       <Layout user={user}>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<Dashboard initialData={statsData} />} />
           <Route path="/view-tracks" element={<ViewTracks />} />
           <Route path="/remove-duplicates" element={<RemoveDuplicates />} />
           <Route path="/filter-sweep" element={<FilterSweep />} />

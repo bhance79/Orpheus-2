@@ -56,7 +56,7 @@ function TopItemsModal({ isOpen, onClose, items, title, type, activeRange, range
                             href={item.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-lg font-medium hover:text-primary"
+                            className="text-lg font-medium hover:text-white/70"
                           >
                             {item.name}
                           </a>
@@ -77,7 +77,7 @@ function TopItemsModal({ isOpen, onClose, items, title, type, activeRange, range
                             href={item.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-lg font-medium hover:text-primary block truncate"
+                            className="text-lg font-medium hover:text-white/70 block truncate"
                           >
                             {item.name}
                           </a>

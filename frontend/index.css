@@ -4,6 +4,14 @@
 
 /* Custom base styles */
 @layer base {
+  :root {
+    --glass-bg: linear-gradient(135deg, rgba(15, 23, 42, 0.479), rgba(15, 23, 42, 0.171));
+    --glass-highlight: radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.35), transparent 55%),
+      radial-gradient(circle at 85% 85%, rgba(59, 130, 246, 0.25), transparent 60%);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --glass-shadow: 0 35px 85px -35px rgba(2, 6, 23, 0.75);
+  }
+
   body {
     @apply bg-bg-dark text-text-primary;
     font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -13,20 +21,36 @@
 /* Import existing styles from styles.css - we'll migrate these gradually */
 @layer components {
   .app-layout {
-    @apply min-h-screen flex flex-col;
+    @apply min-h-screen flex flex-col relative overflow-hidden;
   }
 
   /* Panel Navigation Bar (inside container) */
   .panel-navbar {
-    @apply flex items-center justify-between pb-4 mb-4 border-b border-border;
+    @apply flex items-center justify-between gap-4 bg-transparent;
+  }
+
+  .navbar-left {
+    @apply flex items-center gap-3 flex-1 min-w-0;
+  }
+
+  .navbar-group {
+    @apply flex items-center gap-3 border border-white/20 rounded-full shadow-xl px-4 py-2 mx-auto bg-white/10;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(148, 163, 184, 0.05));
   }
 
   .panel-content {
-    @apply flex-1 overflow-hidden;
+    @apply flex-1 flex flex-col gap-4 w-full overflow-visible;
   }
 
   .navbar-brand {
-    @apply flex items-center gap-3 text-text-primary hover:text-primary transition-colors;
+    @apply flex items-center gap-3 text-text-primary transition-colors;
+    color: #ffffff;
+  }
+
+  .navbar-brand:hover {
+    color: rgba(255, 255, 255, 0.7);
   }
 
   .navbar-logo {
@@ -38,16 +62,19 @@
   }
 
   .navbar-nav {
-    @apply flex items-center gap-1;
+    @apply flex items-center gap-1 justify-center;
   }
 
   .navbar-item {
-    @apply flex items-center gap-2 px-4 py-2 rounded-lg text-text-secondary;
-    @apply hover:bg-bg-input hover:text-text-primary transition-colors;
+    @apply flex items-center gap-2 px-4 py-2 rounded-full text-white font-semibold border border-transparent transition-colors;
+    background-color: rgba(15, 23, 42, 0.2);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 
   .navbar-item.active {
-    @apply bg-bg-input text-primary;
+    @apply text-white border-white/60;
+    background-color: rgba(255, 255, 255, 0.25);
   }
 
   .navbar-icon {
@@ -71,28 +98,33 @@
   }
 
   .main-content {
-    @apply flex-1 flex items-center justify-center p-6;
-    height: 100vh;
+    @apply flex-1 flex items-center justify-center p-4 relative z-10;
+    min-height: 100vh;
   }
 
   /* Centered Dashboard Panel */
   .dashboard-panel {
-    @apply w-full max-w-6xl bg-bg-card rounded-2xl shadow-2xl border border-border;
-    @apply p-6 flex flex-col;
-    max-height: calc(100vh - 48px);
+    @apply w-full flex flex-col gap-4 p-6 relative;
+    max-width: min(1400px, calc(100vw - 120px));
+    height: calc(100vh - 96px);
+    min-height: calc(100vh - 96px);
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   /* Dashboard Grid Layout */
   .dashboard-grid {
-    @apply grid gap-4 h-full;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
+    @apply grid gap-4 w-full h-full;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-auto-rows: minmax(260px, 1fr);
   }
 
   /* Dashboard Cards */
   .dashboard-card {
-    @apply bg-bg-elevated rounded-xl p-4 border border-border;
-    @apply shadow-md overflow-hidden flex flex-col;
+    @apply rounded-2xl p-5 border border-white/10 shadow-xl overflow-hidden flex flex-col;
   }
 
   .dashboard-card--artists {
@@ -130,17 +162,33 @@
   }
 
   .container {
-    @apply max-w-7xl mx-auto px-6 py-6;
+    @apply w-full h-full flex flex-col overflow-y-auto;
+    padding: clamp(1.5rem, 2vw, 2.5rem);
+    border-radius: 32px;
+    border: 1px solid transparent;
+    box-shadow: 0 40px 90px -45px rgba(2, 6, 23, 0.8);
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
   }
 
   .card {
-    @apply bg-bg-card rounded-lg p-6 shadow-lg border border-border;
+    @apply rounded-2xl p-6 shadow-2xl border border-white/10;
   }
 
   .btn {
-    @apply px-4 py-2 bg-primary text-white rounded-lg font-medium;
-    @apply hover:bg-primary-hover transition-colors;
-    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2 rounded-lg font-medium text-white border border-white/20 transition-colors;
+    background-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
+  }
+
+  .btn:hover {
+    background-color: rgba(255, 255, 255, 0.28);
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .btn:disabled {
+    @apply opacity-50 cursor-not-allowed;
   }
 
   .btn-secondary {
@@ -149,7 +197,12 @@
   }
 
   .btn-accent {
-    @apply bg-primary text-white hover:bg-primary-hover;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.35);
+  }
+
+  .btn-accent:hover {
+    background-color: rgba(255, 255, 255, 0.35);
   }
 
   .flash {
@@ -166,8 +219,7 @@
   }
 
   .modal-panel {
-    @apply bg-bg-card rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden;
-    @apply border border-border;
+    @apply rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden border border-white/10;
   }
 
   .modal-header {
@@ -192,7 +244,8 @@
   }
 
   .modal-list-item {
-    @apply flex gap-4 p-4 hover:bg-bg-elevated transition-colors;
+    @apply flex gap-4 p-4 transition-colors rounded-2xl border border-white/5;
+    @apply hover:border-white/15 hover:bg-white/10;
   }
 
   /* Artist cards */
@@ -252,11 +305,42 @@
   }
 
   .genre-bar-value {
-    @apply text-sm font-bold text-primary;
+    @apply text-sm font-bold text-white;
   }
 
   .genre-bar-container {
     @apply relative bg-bg-elevated rounded-full overflow-hidden;
+  }
+
+  /* Shared glassmorphism styling */
+  :is(.dashboard-card, .card, .container, .modal-panel, .modal-list-item) {
+    background-image: var(--glass-bg);
+    border-color: var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: blur(30px) saturate(140%);
+    -webkit-backdrop-filter: blur(30px) saturate(140%);
+  }
+
+  :is(.dashboard-card, .card, .container, .modal-panel, .modal-list-item) {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  :is(.dashboard-card, .card, .container, .modal-panel, .modal-list-item)::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-image: var(--glass-highlight);
+    opacity: 0.35;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  :is(.dashboard-panel, .dashboard-card, .card, .container, .modal-panel, .modal-list-item) > * {
+    position: relative;
+    z-index: 1;
   }
 
   .genre-bar-fill {
@@ -270,7 +354,9 @@
   }
 
   .range-chip--active {
-    @apply bg-primary text-white border-primary;
+    @apply text-white;
+    background-color: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.3);
   }
 
   /* Overlay/Loading */
@@ -287,9 +373,10 @@
   }
 
   .spinner {
-    @apply w-12 h-12 border-4 border-primary border-t-transparent rounded-full;
+    @apply w-12 h-12 border-4 border-white/20 border-t-transparent rounded-full;
     @apply mx-auto mb-4;
     animation: spin 1s linear infinite;
+    border-top-color: rgba(255, 255, 255, 0.6);
   }
 
   @keyframes spin {
@@ -303,7 +390,7 @@
   /* Form elements */
   select {
     @apply bg-bg-input border border-border text-text-primary rounded-lg px-4 py-2;
-    @apply focus:outline-none focus:ring-2 focus:ring-primary;
+    @apply focus:outline-none focus:ring-2 focus:ring-white/40;
   }
 
   /* Track table */
@@ -329,8 +416,12 @@
   }
 
   .link-btn {
-    @apply text-sm text-primary hover:text-primary-hover cursor-pointer;
-    @apply transition-colors;
+    @apply text-sm text-white/80 cursor-pointer transition-opacity;
+  }
+
+  .link-btn:hover {
+    @apply text-white;
+    opacity: 0.75;
   }
 
   .link-btn--disabled {

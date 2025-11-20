@@ -12,9 +12,9 @@ const TIME_RANGE_LABELS = {
   long_term: 'All Time'
 }
 
-function Dashboard() {
-  const [loading, setLoading] = useState(true)
-  const [statsData, setStatsData] = useState(null)
+function Dashboard({ initialData }) {
+  const [loading, setLoading] = useState(!initialData)
+  const [statsData, setStatsData] = useState(initialData || null)
   const [activeArtistRange, setActiveArtistRange] = useState('short_term')
   const [activeTrackRange, setActiveTrackRange] = useState('short_term')
   const [activeGenreSource, setActiveGenreSource] = useState('artists')
@@ -24,8 +24,20 @@ function Dashboard() {
   const [rangeOptions, setRangeOptions] = useState(['short_term', 'medium_term', 'long_term'])
 
   useEffect(() => {
-    loadDashboardStats()
-  }, [])
+    if (initialData) {
+      // Use cached data and set up range options
+      const availableRanges = Object.keys(initialData.top_artists || {})
+      if (availableRanges.length > 0) {
+        setRangeOptions(availableRanges)
+        const preferred = availableRanges.includes('short_term') ? 'short_term' : availableRanges[0]
+        setActiveArtistRange(preferred)
+        setActiveTrackRange(preferred)
+        setActiveGenreRange(preferred)
+      }
+    } else {
+      loadDashboardStats()
+    }
+  }, [initialData])
 
   const loadDashboardStats = async () => {
     try {

@@ -133,7 +133,7 @@ function ViewTracks() {
                   <tr key={index}>
                     <td>
                       {track.url ? (
-                        <a href={track.url} target="_blank" rel="noopener noreferrer" className="hover:text-primary">
+                        <a href={track.url} target="_blank" rel="noopener noreferrer" className="hover:text-white/70">
                           {track.name}
                         </a>
                       ) : (

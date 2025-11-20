@@ -42,7 +42,7 @@ function RecentlyPlayed({ tracks, recentMinutes, compact }) {
             <div key={index} className="flex items-center justify-between p-2 hover:bg-gray-800 rounded">
               <div className="flex-1">
                 <div className="font-medium">
-                  <a href={track.url} target="_blank" rel="noopener noreferrer" className="hover:text-primary">
+                  <a href={track.url} target="_blank" rel="noopener noreferrer" className="hover:text-white/70">
                     {track.name}
                   </a>
                 </div>

@@ -16,7 +16,7 @@ function TopArtistsShowcase({ artists, activeRange, rangeOptions, rangeLabels, o
                 <option key={range} value={range}>{rangeLabels[range] || range}</option>
               ))}
             </select>
-            <button onClick={onShowMore} className="text-xs text-primary hover:text-primary-hover">
+            <button onClick={onShowMore} className="text-xs text-white/80 hover:text-white/60">
               More
             </button>
           </div>
@@ -64,7 +64,7 @@ function TopArtistsShowcase({ artists, activeRange, rangeOptions, rangeLabels, o
                 type="button"
                 className={`px-3 py-1 text-xs font-medium rounded-full border transition ${
                   activeRange === range
-                    ? 'bg-primary text-white border-primary'
+                    ? 'bg-white/20 text-white border-white/30'
                     : 'border-gray-600 text-gray-400 hover:text-white'
                 }`}
                 onClick={() => onRangeChange(range)}
@@ -114,12 +114,12 @@ function TopArtistsShowcase({ artists, activeRange, rangeOptions, rangeLabels, o
                   </div>
                   <div className="mt-3">
                     <div className="font-semibold text-lg text-white truncate">
-                      <a href={artist.url} target="_blank" rel="noopener noreferrer" className="hover:text-primary">
+                      <a href={artist.url} target="_blank" rel="noopener noreferrer" className="hover:text-white/70">
                         {artist.name}
                       </a>
                     </div>
                     {primaryGenre ? (
-                      <div className="text-xs uppercase tracking-wide text-primary">{primaryGenre}</div>
+                      <div className="text-xs uppercase tracking-wide text-white/70">{primaryGenre}</div>
                     ) : (
                       <div className="text-xs text-gray-500">Genre unavailable</div>
                     )}

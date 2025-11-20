@@ -312,6 +312,9 @@ def callback():
         # If profile fails, continue — not fatal
         pass
 
+    # In development, redirect to Vite dev server
+    if os.environ.get("FLASK_ENV") == "development" or app.debug:
+        return redirect("http://localhost:5173/")
     return redirect(url_for("index"))
 
 @app.route("/select", methods=["POST"])

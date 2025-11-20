@@ -1,12 +1,73 @@
-function TopGenres({ genresData, activeSource, activeRange, rangeOptions, rangeLabels, onSourceChange, onRangeChange }) {
+function TopGenres({ genresData, activeSource, activeRange, rangeOptions, rangeLabels, onSourceChange, onRangeChange, compact }) {
   const genreSourceLabels = {
-    artists: 'Top Artists',
-    tracks: 'Top Tracks'
+    artists: 'Artists',
+    tracks: 'Tracks'
   }
   const genreSourceOptions = ['artists', 'tracks']
 
   const sourceData = genresData[activeSource] || {}
   const genres = sourceData[activeRange] || []
+  const displayGenres = compact ? genres.slice(0, 5) : genres
+
+  if (compact) {
+    return (
+      <>
+        <div className="card-header">
+          <h3 className="card-title">Top Genres</h3>
+          <div className="card-controls">
+            <select
+              value={activeSource}
+              onChange={(e) => onSourceChange(e.target.value)}
+              className="text-xs bg-bg-input border-0 rounded px-2 py-1"
+            >
+              {genreSourceOptions.map(source => (
+                <option key={source} value={source}>{genreSourceLabels[source]}</option>
+              ))}
+            </select>
+            <select
+              value={activeRange}
+              onChange={(e) => onRangeChange(e.target.value)}
+              className="text-xs bg-bg-input border-0 rounded px-2 py-1"
+            >
+              {rangeOptions.map(range => (
+                <option key={range} value={range}>{rangeLabels[range] || range}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="card-content space-y-2 overflow-y-auto">
+          {displayGenres.length === 0 ? (
+            <div className="text-xs text-gray-400">No data</div>
+          ) : (
+            displayGenres.map((genre, index) => {
+              const percentage = genre.percentage || 0
+              const maxPercentage = Math.max(...displayGenres.map(g => g.percentage || 0)) || 1
+              const width = Math.max((percentage / maxPercentage) * 100, 2)
+              const hue = 250 - index * 15
+
+              return (
+                <div key={index} className="text-xs">
+                  <div className="flex justify-between mb-1">
+                    <span className="text-gray-300">{index + 1}. {genre.genre}</span>
+                    <span className="text-primary">{genre.percentage}%</span>
+                  </div>
+                  <div className="h-2 bg-bg-input rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${width}%`,
+                        background: `hsl(${hue}, 60%, 55%)`
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+      </>
+    )
+  }
 
   const renderGenreChart = () => {
     if (genres.length === 0) {

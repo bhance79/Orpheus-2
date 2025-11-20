@@ -1,5 +1,49 @@
-function TopTracks({ tracks, activeRange, rangeOptions, rangeLabels, onRangeChange, onShowMore, canShowMore }) {
-  const previewTracks = tracks.slice(0, 5)
+function TopTracks({ tracks, activeRange, rangeOptions, rangeLabels, onRangeChange, onShowMore, canShowMore, compact }) {
+  const previewTracks = tracks.slice(0, compact ? 4 : 5)
+
+  if (compact) {
+    return (
+      <>
+        <div className="card-header">
+          <h3 className="card-title">Top Tracks</h3>
+          <div className="card-controls">
+            <select
+              value={activeRange}
+              onChange={(e) => onRangeChange(e.target.value)}
+              className="text-xs bg-bg-input border-0 rounded px-2 py-1"
+            >
+              {rangeOptions.map(range => (
+                <option key={range} value={range}>{rangeLabels[range] || range}</option>
+              ))}
+            </select>
+            <button onClick={onShowMore} className="text-xs text-primary hover:text-primary-hover">
+              More
+            </button>
+          </div>
+        </div>
+        <div className="card-content space-y-1 overflow-y-auto">
+          {previewTracks.length === 0 ? (
+            <div className="text-xs text-gray-400">No data</div>
+          ) : (
+            previewTracks.map((track, index) => (
+              <div key={index} className="flex items-center gap-2 p-1 hover:bg-bg-input rounded text-xs">
+                <span className="text-gray-500 w-4">{index + 1}</span>
+                {track.cover ? (
+                  <img src={track.cover} alt={track.name} className="w-8 h-8 rounded object-cover flex-shrink-0" />
+                ) : (
+                  <div className="w-8 h-8 rounded bg-gray-700 flex-shrink-0"></div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{track.name}</div>
+                  <div className="text-gray-400 truncate text-[10px]">{track.artists}</div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </>
+    )
+  }
 
   return (
     <div className="card mb-6">

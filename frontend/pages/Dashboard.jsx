@@ -93,47 +93,60 @@ function Dashboard() {
   }
 
   return (
-    <div className="container">
-      <h2 className="text-2xl font-bold mb-4">Your Music Dashboard</h2>
+    <>
+      {/* Dashboard Grid */}
+      <div className="dashboard-grid">
+        {/* Top Artists Card */}
+        <div className="dashboard-card dashboard-card--artists">
+          <TopArtistsShowcase
+            artists={statsData?.top_artists?.[activeArtistRange] || []}
+            activeRange={activeArtistRange}
+            rangeOptions={rangeOptions}
+            rangeLabels={statsData?.range_labels || TIME_RANGE_LABELS}
+            onRangeChange={setActiveArtistRange}
+            onShowMore={() => openModal('artists')}
+            canShowMore={canShowMore('artists')}
+            compact
+          />
+        </div>
 
-      {/* Top Artists Showcase */}
-      <TopArtistsShowcase
-        artists={statsData?.top_artists?.[activeArtistRange] || []}
-        activeRange={activeArtistRange}
-        rangeOptions={rangeOptions}
-        rangeLabels={statsData?.range_labels || TIME_RANGE_LABELS}
-        onRangeChange={setActiveArtistRange}
-        onShowMore={() => openModal('artists')}
-        canShowMore={canShowMore('artists')}
-      />
+        {/* Top Tracks Card */}
+        <div className="dashboard-card dashboard-card--tracks">
+          <TopTracks
+            tracks={statsData?.top_tracks?.[activeTrackRange] || []}
+            activeRange={activeTrackRange}
+            rangeOptions={rangeOptions}
+            rangeLabels={statsData?.range_labels || TIME_RANGE_LABELS}
+            onRangeChange={setActiveTrackRange}
+            onShowMore={() => openModal('tracks')}
+            canShowMore={canShowMore('tracks')}
+            compact
+          />
+        </div>
 
-      {/* Top Tracks */}
-      <TopTracks
-        tracks={statsData?.top_tracks?.[activeTrackRange] || []}
-        activeRange={activeTrackRange}
-        rangeOptions={rangeOptions}
-        rangeLabels={statsData?.range_labels || TIME_RANGE_LABELS}
-        onRangeChange={setActiveTrackRange}
-        onShowMore={() => openModal('tracks')}
-        canShowMore={canShowMore('tracks')}
-      />
+        {/* Top Genres Card */}
+        <div className="dashboard-card dashboard-card--genres">
+          <TopGenres
+            genresData={statsData?.top_genres || { artists: {}, tracks: {} }}
+            activeSource={activeGenreSource}
+            activeRange={activeGenreRange}
+            rangeOptions={rangeOptions}
+            rangeLabels={statsData?.range_labels || TIME_RANGE_LABELS}
+            onSourceChange={setActiveGenreSource}
+            onRangeChange={setActiveGenreRange}
+            compact
+          />
+        </div>
 
-      {/* Top Genres */}
-      <TopGenres
-        genresData={statsData?.top_genres || { artists: {}, tracks: {} }}
-        activeSource={activeGenreSource}
-        activeRange={activeGenreRange}
-        rangeOptions={rangeOptions}
-        rangeLabels={statsData?.range_labels || TIME_RANGE_LABELS}
-        onSourceChange={setActiveGenreSource}
-        onRangeChange={setActiveGenreRange}
-      />
-
-      {/* Recently Played */}
-      <RecentlyPlayed
-        tracks={statsData?.recently_played || []}
-        recentMinutes={statsData?.recent_minutes_listened}
-      />
+        {/* Recently Played Card */}
+        <div className="dashboard-card dashboard-card--recent">
+          <RecentlyPlayed
+            tracks={statsData?.recently_played || []}
+            recentMinutes={statsData?.recent_minutes_listened}
+            compact
+          />
+        </div>
+      </div>
 
       {/* Modal */}
       {showModal && (
@@ -149,7 +162,7 @@ function Dashboard() {
           onRangeChange={modalType === 'artists' ? setActiveArtistRange : setActiveTrackRange}
         />
       )}
-    </div>
+    </>
   )
 }
 

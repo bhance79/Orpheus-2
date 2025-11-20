@@ -1,8 +1,6 @@
-import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
 function Layout({ children, user }) {
-  const [sidebarExpanded, setSidebarExpanded] = useState(false)
   const location = useLocation()
 
   const navItems = [
@@ -14,71 +12,46 @@ function Layout({ children, user }) {
 
   return (
     <div className="app-layout">
-      {/* Sidebar */}
-      <aside
-        className={`sidebar ${sidebarExpanded ? 'expanded' : ''}`}
-        onMouseEnter={() => setSidebarExpanded(true)}
-        onMouseLeave={() => setSidebarExpanded(false)}
-      >
-        {/* Logo/Brand */}
-        <div className="sidebar-header">
-          <div className="sidebar-icon">
-            <img src="/static/icons/home-icon-w.png" alt="Orpheus Logo" />
-          </div>
-          <div className="sidebar-text">Orpheus</div>
-        </div>
-
-        {/* Navigation Items */}
-        <nav className="sidebar-nav">
-          {navItems.map(item => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`sidebar-item ${location.pathname === item.path ? 'active' : ''}`}
-            >
-              <div className="sidebar-icon">
-                <img src={`/static/icons/${item.icon}`} alt={item.label} />
-              </div>
-              <div className="sidebar-text">{item.label}</div>
+      <main className="main-content">
+        <div className="dashboard-panel">
+          {/* Navigation Bar inside panel */}
+          <header className="panel-navbar">
+            {/* Logo/Brand */}
+            <Link to="/" className="navbar-brand">
+              <img src="/static/icons/home-icon-w.png" alt="Orpheus Logo" className="navbar-logo" />
+              <span className="navbar-title">Orpheus</span>
             </Link>
-          ))}
-        </nav>
 
-        {/* Logout */}
-        <div className="sidebar-footer">
-          <a href="/logout" className="sidebar-item">
-            <div className="sidebar-icon">
-              <img src="/static/icons/logout-w.png" alt="Logout" />
+            {/* Navigation Items */}
+            <nav className="navbar-nav">
+              {navItems.map(item => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`navbar-item ${location.pathname === item.path ? 'active' : ''}`}
+                >
+                  <img src={`/static/icons/${item.icon}`} alt={item.label} className="navbar-icon" />
+                  <span className="navbar-label">{item.label}</span>
+                </Link>
+              ))}
+            </nav>
+
+            {/* User & Logout */}
+            <div className="navbar-right">
+              <span className="navbar-user">Welcome, {user?.name || 'User'}</span>
+              <a href="/logout" className="navbar-item navbar-logout">
+                <img src="/static/icons/logout-w.png" alt="Logout" className="navbar-icon" />
+                <span className="navbar-label">Logout</span>
+              </a>
             </div>
-            <div className="sidebar-text">Logout</div>
-          </a>
-        </div>
-      </aside>
+          </header>
 
-      {/* Main Content */}
-      <div className="main-content">
-        <header className="top-bar">
-          <div className="user-info">
-            <h1>
-              <Link to="/" className="home-link">
-                Welcome back, {user?.name || 'User'}
-              </Link>
-            </h1>
+          {/* Page Content */}
+          <div className="panel-content">
+            {children}
           </div>
-        </header>
-
-        {children}
-      </div>
-
-      {/* Icon Attribution Footer */}
-      <footer className="icon-attribution fixed bottom-2 right-2 text-xs text-text-muted">
-        <div className="attribution-text">
-          Logout Icon made by{' '}
-          <a href="https://icons8.com/icon/VTOU0AOwSnkY/logout" className="text-primary hover:text-primary-hover">
-            Icons8
-          </a>
         </div>
-      </footer>
+      </main>
     </div>
   )
 }

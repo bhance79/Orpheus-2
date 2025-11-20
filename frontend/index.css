@@ -13,76 +13,120 @@
 /* Import existing styles from styles.css - we'll migrate these gradually */
 @layer components {
   .app-layout {
-    @apply min-h-screen flex;
+    @apply min-h-screen flex flex-col;
   }
 
-  .sidebar {
-    @apply fixed left-0 top-0 h-full bg-bg-elevated border-r border-border z-50;
-    @apply transition-all duration-300 ease-in-out;
-    width: 64px;
+  /* Panel Navigation Bar (inside container) */
+  .panel-navbar {
+    @apply flex items-center justify-between pb-4 mb-4 border-b border-border;
   }
 
-  .sidebar.expanded {
-    width: 240px;
+  .panel-content {
+    @apply flex-1 overflow-hidden;
   }
 
-  .sidebar-header {
-    @apply flex items-center gap-3 p-4 border-b border-border;
+  .navbar-brand {
+    @apply flex items-center gap-3 text-text-primary hover:text-primary transition-colors;
   }
 
-  .sidebar-icon {
-    @apply w-8 h-8 flex-shrink-0 flex items-center justify-center;
+  .navbar-logo {
+    @apply w-8 h-8 object-contain;
   }
 
-  .sidebar-icon img {
-    @apply w-6 h-6 object-contain;
+  .navbar-title {
+    @apply text-xl font-bold;
   }
 
-  .sidebar-text {
-    @apply text-sm font-medium whitespace-nowrap overflow-hidden opacity-0;
-    @apply transition-opacity duration-300;
+  .navbar-nav {
+    @apply flex items-center gap-1;
   }
 
-  .sidebar.expanded .sidebar-text {
-    @apply opacity-100;
+  .navbar-item {
+    @apply flex items-center gap-2 px-4 py-2 rounded-lg text-text-secondary;
+    @apply hover:bg-bg-input hover:text-text-primary transition-colors;
   }
 
-  .sidebar-nav {
-    @apply flex-1 py-4;
+  .navbar-item.active {
+    @apply bg-bg-input text-primary;
   }
 
-  .sidebar-item {
-    @apply flex items-center gap-3 px-4 py-3 text-text-secondary;
-    @apply hover:bg-bg-input hover:text-text-primary transition-colors cursor-pointer;
-    @apply w-full text-left border-0 bg-transparent;
+  .navbar-icon {
+    @apply w-5 h-5 object-contain;
   }
 
-  .sidebar-item.active {
-    @apply bg-bg-input text-primary border-l-2 border-primary;
+  .navbar-label {
+    @apply text-sm font-medium;
   }
 
-  .sidebar-footer {
-    @apply border-t border-border p-2;
+  .navbar-right {
+    @apply flex items-center gap-4;
+  }
+
+  .navbar-user {
+    @apply text-sm text-text-secondary;
+  }
+
+  .navbar-logout {
+    @apply text-text-secondary hover:text-red-400;
   }
 
   .main-content {
-    @apply flex-1 ml-16;
+    @apply flex-1 flex items-center justify-center p-6;
+    height: 100vh;
   }
 
-  .top-bar {
-    @apply sticky top-0 bg-bg-card border-b border-border px-6 py-4 z-40;
+  /* Centered Dashboard Panel */
+  .dashboard-panel {
+    @apply w-full max-w-6xl bg-bg-card rounded-2xl shadow-2xl border border-border;
+    @apply p-6 flex flex-col;
+    max-height: calc(100vh - 48px);
   }
 
-  .user-info {
-    @apply flex items-center gap-3;
+  /* Dashboard Grid Layout */
+  .dashboard-grid {
+    @apply grid gap-4 h-full;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
   }
 
-  .profile-pic {
-    @apply w-10 h-10 rounded-full object-cover;
+  /* Dashboard Cards */
+  .dashboard-card {
+    @apply bg-bg-elevated rounded-xl p-4 border border-border;
+    @apply shadow-md overflow-hidden flex flex-col;
   }
 
-  .home-link {
-    @apply text-xl font-bold text-text-primary hover:text-primary transition-colors;
+  .dashboard-card--artists {
+    @apply col-span-1;
+  }
+
+  .dashboard-card--tracks {
+    @apply col-span-1;
+  }
+
+  .dashboard-card--genres {
+    @apply col-span-1;
+  }
+
+  .dashboard-card--recent {
+    @apply col-span-1;
+  }
+
+  /* Compact card header */
+  .card-header {
+    @apply flex items-center justify-between mb-3;
+  }
+
+  .card-title {
+    @apply text-sm font-bold text-text-primary;
+  }
+
+  .card-controls {
+    @apply flex items-center gap-2;
+  }
+
+  /* Compact content area */
+  .card-content {
+    @apply flex-1 overflow-hidden;
   }
 
   .container {

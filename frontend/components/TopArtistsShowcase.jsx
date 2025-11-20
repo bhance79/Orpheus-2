@@ -1,11 +1,50 @@
-function TopArtistsShowcase({ artists, activeRange, rangeOptions, rangeLabels, onRangeChange, onShowMore, canShowMore }) {
-  const escapeHtml = (value = '') => {
-    const div = document.createElement('div')
-    div.textContent = value
-    return div.innerHTML
-  }
+function TopArtistsShowcase({ artists, activeRange, rangeOptions, rangeLabels, onRangeChange, onShowMore, canShowMore, compact }) {
+  const heroArtists = artists.slice(0, compact ? 5 : 15)
 
-  const heroArtists = artists.slice(0, 15)
+  if (compact) {
+    return (
+      <>
+        <div className="card-header">
+          <h3 className="card-title">Top Artists</h3>
+          <div className="card-controls">
+            <select
+              value={activeRange}
+              onChange={(e) => onRangeChange(e.target.value)}
+              className="text-xs bg-bg-input border-0 rounded px-2 py-1"
+            >
+              {rangeOptions.map(range => (
+                <option key={range} value={range}>{rangeLabels[range] || range}</option>
+              ))}
+            </select>
+            <button onClick={onShowMore} className="text-xs text-primary hover:text-primary-hover">
+              More
+            </button>
+          </div>
+        </div>
+        <div className="card-content">
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {heroArtists.length === 0 ? (
+              <div className="text-xs text-gray-400">No data</div>
+            ) : (
+              heroArtists.map((artist, index) => (
+                <div key={artist.id || index} className="flex-shrink-0 text-center w-16">
+                  <div className="relative w-14 h-14 mx-auto rounded-full overflow-hidden bg-gray-700">
+                    {artist.image && (
+                      <img src={artist.image} alt={artist.name} className="w-full h-full object-cover" />
+                    )}
+                    <div className="absolute bottom-0 left-0 text-[10px] font-bold text-white bg-black/70 px-1 rounded-tr">
+                      {index + 1}
+                    </div>
+                  </div>
+                  <div className="text-[10px] mt-1 truncate text-gray-300">{artist.name}</div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </>
+    )
+  }
 
   return (
     <div className="card mb-6 top-artists-card">

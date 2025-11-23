@@ -20,6 +20,7 @@ function App() {
         if (data.ok) {
           setIsAuthenticated(true)
           setStatsData(data) // Cache the stats data
+          setUser(data.user || null)
         } else {
           setIsAuthenticated(false)
         }

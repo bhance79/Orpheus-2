@@ -690,6 +690,12 @@ def api_user_stats():
     try:
         sp = get_sp()
 
+        # Get user profile
+        user = sp.current_user()
+        user_name = user.get("display_name", "User")
+        user_images = user.get("images", [])
+        user_image = user_images[0].get("url") if user_images else None
+
         def format_artist(artist: Dict[str, Any]) -> Dict[str, Any]:
             images = artist.get("images") or []
             name = artist.get("name") or "Unknown Artist"
@@ -781,6 +787,10 @@ def api_user_stats():
 
         return jsonify({
             "ok": True,
+            "user": {
+                "name": user_name,
+                "image": user_image,
+            },
             "top_artists": top_artists,
             "top_tracks": top_tracks,
             "recently_played": recently_played,
@@ -788,6 +798,57 @@ def api_user_stats():
             "top_genres": top_genres,
             "recent_minutes_listened": recent_minutes,
         })
+
+    except SpotifyException as e:
+        return jsonify({"ok": False, "error": f"spotify_error:{e}"}), 500
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.route("/api/search")
+def api_search():
+    """Search for tracks and albums."""
+    token_info = session.get("token_info")
+    if not token_info:
+        return jsonify({"ok": False, "error": "not_logged_in"}), 401
+
+    sp = spotipy.Spotify(auth=token_info.get("access_token"))
+
+    query = request.args.get("q", "").strip()
+    search_type = request.args.get("type", "track,album")
+    limit = min(int(request.args.get("limit", 5)), 20)
+
+    if not query:
+        return jsonify({"ok": True, "results": []})
+
+    try:
+        results = sp.search(q=query, type=search_type, limit=limit)
+        items = []
+
+        # Process tracks
+        if "tracks" in results:
+            for track in results["tracks"]["items"]:
+                items.append({
+                    "type": "track",
+                    "name": track["name"],
+                    "artist": ", ".join(a["name"] for a in track["artists"]),
+                    "image": track["album"]["images"][0]["url"] if track["album"]["images"] else None,
+                    "id": track["id"],
+                    "uri": track["uri"]
+                })
+
+        # Process albums
+        if "albums" in results:
+            for album in results["albums"]["items"]:
+                items.append({
+                    "type": "album",
+                    "name": album["name"],
+                    "artist": ", ".join(a["name"] for a in album["artists"]),
+                    "image": album["images"][0]["url"] if album["images"] else None,
+                    "id": album["id"],
+                    "uri": album["uri"]
+                })
+
+        return jsonify({"ok": True, "results": items})
 
     except SpotifyException as e:
         return jsonify({"ok": False, "error": f"spotify_error:{e}"}), 500

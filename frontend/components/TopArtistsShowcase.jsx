@@ -22,7 +22,6 @@ function TopArtistsShowcase({ artists, activeRange, rangeOptions, rangeLabels, o
     return (
       <>
         <div className="card-header">
-          <h3 className="card-title">Top Artists</h3>
           <div className="card-controls">
             <select
               value={activeRange}

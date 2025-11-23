@@ -5,7 +5,6 @@ function TopTracks({ tracks, activeRange, rangeOptions, rangeLabels, onRangeChan
     return (
       <>
         <div className="card-header">
-          <h3 className="card-title">Top Tracks</h3>
           <div className="card-controls">
             <select
               value={activeRange}

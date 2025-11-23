@@ -1,3 +1,29 @@
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
+
+// Color palette for pie chart slices
+const COLORS = [
+  'hsl(250, 60%, 55%)',
+  'hsl(235, 60%, 55%)',
+  'hsl(220, 60%, 55%)',
+  'hsl(205, 60%, 55%)',
+  'hsl(190, 60%, 55%)',
+  'hsl(175, 60%, 55%)',
+  'hsl(160, 60%, 55%)',
+  'hsl(145, 60%, 55%)',
+]
+
+const CustomTooltip = ({ active, payload }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-bg-elevated border border-white/20 rounded-lg px-3 py-2 shadow-xl">
+        <p className="text-sm text-white font-medium">{payload[0].name}</p>
+        <p className="text-xs text-gray-400">{payload[0].value}%</p>
+      </div>
+    )
+  }
+  return null
+}
+
 function TopGenres({ genresData, activeSource, activeRange, rangeOptions, rangeLabels, onSourceChange, onRangeChange, compact }) {
   const genreSourceLabels = {
     artists: 'Artists',
@@ -13,7 +39,6 @@ function TopGenres({ genresData, activeSource, activeRange, rangeOptions, rangeL
     return (
       <>
         <div className="card-header">
-          <h3 className="card-title">Top Genres</h3>
           <div className="card-controls">
             <select
               value={activeSource}
@@ -35,34 +60,31 @@ function TopGenres({ genresData, activeSource, activeRange, rangeOptions, rangeL
             </select>
           </div>
         </div>
-        <div className="card-content space-y-2 overflow-y-auto">
+        <div className="card-content flex-1 flex items-center justify-center">
           {displayGenres.length === 0 ? (
             <div className="text-xs text-gray-400">No data</div>
           ) : (
-            displayGenres.map((genre, index) => {
-              const percentage = genre.percentage || 0
-              const maxPercentage = Math.max(...displayGenres.map(g => g.percentage || 0)) || 1
-              const width = Math.max((percentage / maxPercentage) * 100, 2)
-              const hue = 250 - index * 15
-
-              return (
-                <div key={index} className="text-xs">
-                  <div className="flex justify-between mb-1">
-                    <span className="text-gray-300">{index + 1}. {genre.genre}</span>
-                    <span className="text-white/80">{genre.percentage}%</span>
-                  </div>
-                  <div className="h-2 bg-bg-input rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${width}%`,
-                        background: `hsl(${hue}, 60%, 55%)`
-                      }}
-                    ></div>
-                  </div>
-                </div>
-              )
-            })
+            <ResponsiveContainer width="100%" height={180}>
+              <PieChart>
+                <Tooltip content={<CustomTooltip />} />
+                <Pie
+                  data={displayGenres.map(g => ({ name: g.genre, value: g.percentage }))}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={40}
+                  outerRadius={70}
+                  stroke="none"
+                  startAngle={90}
+                  endAngle={-270}
+                >
+                  {displayGenres.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
           )}
         </div>
       </>

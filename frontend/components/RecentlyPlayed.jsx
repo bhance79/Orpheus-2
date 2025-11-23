@@ -3,7 +3,6 @@ function RecentlyPlayed({ tracks, recentMinutes, compact }) {
     return (
       <>
         <div className="card-header">
-          <h3 className="card-title">Recently Played</h3>
           {recentMinutes && (
             <span className="text-[10px] text-gray-400">{recentMinutes} min</span>
           )}

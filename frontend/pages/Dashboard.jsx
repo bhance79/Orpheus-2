@@ -22,6 +22,11 @@ function Dashboard({ initialData }) {
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState(null)
   const [rangeOptions, setRangeOptions] = useState(['short_term', 'medium_term', 'long_term'])
+  const [spotlightItem, setSpotlightItem] = useState(null)
+  const [spotlightSearch, setSpotlightSearch] = useState('')
+  const [spotlightResults, setSpotlightResults] = useState([])
+  const [searchingSpotlight, setSearchingSpotlight] = useState(false)
+  const [spotlightEditing, setSpotlightEditing] = useState(false)
 
   useEffect(() => {
     if (initialData) {
@@ -100,6 +105,55 @@ function Dashboard({ initialData }) {
     return items.length > 5
   }
 
+  const searchSpotlight = async (query) => {
+    if (!query.trim()) {
+      setSpotlightResults([])
+      return
+    }
+    setSearchingSpotlight(true)
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&type=track,album&limit=5`)
+      const data = await res.json()
+      if (data.ok) {
+        setSpotlightResults(data.results || [])
+      }
+    } catch (err) {
+      console.error('Search error:', err)
+    } finally {
+      setSearchingSpotlight(false)
+    }
+  }
+
+  const selectSpotlightItem = (item) => {
+    setSpotlightItem(item)
+    setSpotlightSearch('')
+    setSpotlightResults([])
+    setSpotlightEditing(false)
+  }
+
+  const clearSpotlight = () => {
+    setSpotlightItem(null)
+    setSpotlightEditing(true)
+  }
+
+  const userName = statsData?.user?.name || 'Spotify listener'
+  const userInitial = userName?.[0] || 'U'
+  const fallbackSpotlightTrack = statsData?.top_tracks?.[activeTrackRange]?.[0]
+  const fallbackSpotlight = fallbackSpotlightTrack
+    ? {
+        type: 'track',
+        name: fallbackSpotlightTrack.name,
+        artist: fallbackSpotlightTrack.artists,
+        image: fallbackSpotlightTrack.cover,
+        album: fallbackSpotlightTrack.album
+      }
+    : null
+  const spotlightDisplay = spotlightItem || fallbackSpotlight
+  const trackRangeLabel = statsData?.range_labels?.[activeTrackRange] || TIME_RANGE_LABELS[activeTrackRange] || ''
+  const shouldShowSpotlightSearch = spotlightEditing || !spotlightDisplay
+  const canShowArtists = canShowMore('artists')
+  const canShowTracks = canShowMore('tracks')
+
   if (loading) {
     return <LoadingOverlay message="Loading your dashboard..." />
   }
@@ -107,23 +161,111 @@ function Dashboard({ initialData }) {
   return (
     <>
       {/* Dashboard Grid */}
-      <div className="dashboard-grid">
-        {/* Top Artists Card */}
-        <div className="dashboard-card dashboard-card--artists">
-          <TopArtistsShowcase
-            artists={statsData?.top_artists?.[activeArtistRange] || []}
-            activeRange={activeArtistRange}
-            rangeOptions={rangeOptions}
-            rangeLabels={statsData?.range_labels || TIME_RANGE_LABELS}
-            onRangeChange={setActiveArtistRange}
-            onShowMore={() => openModal('artists')}
-            canShowMore={canShowMore('artists')}
-            compact
-          />
-        </div>
+      <div className="dashboard-grid dashboard-grid--six">
+        {/* Welcome */}
+        <section className="dashboard-card dashboard-card--welcome">
+          <div className="welcome-card">
+            <div className="welcome-copy">
+              <p className="feature-label">Welcome back</p>
+              <h2 className="feature-title">{userName}</h2>
+              <p className="feature-caption">Your listening snapshot is ready.</p>
+            </div>
+            {statsData?.user?.image ? (
+              <img src={statsData.user.image} alt={userName} className="welcome-avatar" />
+            ) : (
+              <div className="welcome-avatar welcome-avatar--placeholder">{userInitial}</div>
+            )}
+          </div>
+        </section>
 
-        {/* Top Tracks Card */}
-        <div className="dashboard-card dashboard-card--tracks">
+        {/* Spotlight */}
+        <section className="dashboard-card dashboard-card--spotlight">
+          <p className="feature-label">Spotlight</p>
+          <div className="spotlight-body">
+            <div className="spotlight-cover">
+              {spotlightDisplay?.image ? (
+                <img src={spotlightDisplay.image} alt={spotlightDisplay.name} />
+              ) : (
+                <div className="spotlight-cover--placeholder">Album cover</div>
+              )}
+            </div>
+            <div className="spotlight-info">
+              <p className="spotlight-label">
+                {spotlightDisplay?.album || (spotlightDisplay?.type === 'album' ? 'Album' : 'Track')}
+              </p>
+              <h3 className="spotlight-title">
+                {spotlightDisplay?.name || 'Choose something to feature'}
+              </h3>
+              <p className="spotlight-artist">
+                {spotlightDisplay?.artist || spotlightDisplay?.artists || 'Use edit to search Spotify.'}
+              </p>
+              {spotlightDisplay && !spotlightItem && trackRangeLabel && (
+                <p className="spotlight-caption">
+                  Auto-filled from your {trackRangeLabel.toLowerCase()} top tracks.
+                </p>
+              )}
+              <div className="spotlight-actions">
+                {spotlightItem && (
+                  <button type="button" className="spotlight-clear" onClick={clearSpotlight}>
+                    Clear
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="spotlight-edit"
+                  onClick={() => setSpotlightEditing(prev => !prev)}
+                >
+                  {shouldShowSpotlightSearch ? 'Close' : 'Edit'}
+                </button>
+              </div>
+            </div>
+          </div>
+          {shouldShowSpotlightSearch && (
+            <div className="spotlight-search">
+              <div className="spotlight-search-bar">
+                <input
+                  type="text"
+                  placeholder="Search track or album..."
+                  value={spotlightSearch}
+                  onChange={(e) => {
+                    setSpotlightSearch(e.target.value)
+                    searchSpotlight(e.target.value)
+                  }}
+                />
+                {searchingSpotlight && <span className="spotlight-loading">Searching…</span>}
+              </div>
+              {spotlightResults.length > 0 && (
+                <div className="spotlight-results">
+                  {spotlightResults.map((item, index) => (
+                    <button
+                      key={`${item.id}-${index}`}
+                      type="button"
+                      className="spotlight-result-item"
+                      onClick={() => selectSpotlightItem(item)}
+                    >
+                      {item.image ? (
+                        <img src={item.image} alt="" className="spotlight-result-thumb" />
+                      ) : (
+                        <div className="spotlight-result-thumb spotlight-result-thumb--placeholder"></div>
+                      )}
+                      <div className="spotlight-result-copy">
+                        <p className="spotlight-result-name">{item.name}</p>
+                        <p className="spotlight-result-artist">{item.artist || item.type}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {!spotlightResults.length && !spotlightSearch && (
+                <p className="feature-caption">Type to search Spotify and set this card.</p>
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* Top Tracks */}
+        <section className="dashboard-card dashboard-card--tracks">
+          <p className="feature-label">Top tracks</p>
           <TopTracks
             tracks={statsData?.top_tracks?.[activeTrackRange] || []}
             activeRange={activeTrackRange}
@@ -131,13 +273,29 @@ function Dashboard({ initialData }) {
             rangeLabels={statsData?.range_labels || TIME_RANGE_LABELS}
             onRangeChange={setActiveTrackRange}
             onShowMore={() => openModal('tracks')}
-            canShowMore={canShowMore('tracks')}
+            canShowMore={canShowTracks}
             compact
           />
-        </div>
+        </section>
 
-        {/* Top Genres Card */}
-        <div className="dashboard-card dashboard-card--genres">
+        {/* Top Artists */}
+        <section className="dashboard-card dashboard-card--artists">
+          <p className="feature-label">Top artists</p>
+          <TopArtistsShowcase
+            artists={statsData?.top_artists?.[activeArtistRange] || []}
+            activeRange={activeArtistRange}
+            rangeOptions={rangeOptions}
+            rangeLabels={statsData?.range_labels || TIME_RANGE_LABELS}
+            onRangeChange={setActiveArtistRange}
+            onShowMore={() => openModal('artists')}
+            canShowMore={canShowArtists}
+            compact
+          />
+        </section>
+
+        {/* Top Genres */}
+        <section className="dashboard-card dashboard-card--genres">
+          <p className="feature-label">Top genres</p>
           <TopGenres
             genresData={statsData?.top_genres || { artists: {}, tracks: {} }}
             activeSource={activeGenreSource}
@@ -148,16 +306,17 @@ function Dashboard({ initialData }) {
             onRangeChange={setActiveGenreRange}
             compact
           />
-        </div>
+        </section>
 
-        {/* Recently Played Card */}
-        <div className="dashboard-card dashboard-card--recent">
+        {/* Extra container */}
+        <section className="dashboard-card dashboard-card--extra">
+          <p className="feature-label">Recently played</p>
           <RecentlyPlayed
             tracks={statsData?.recently_played || []}
             recentMinutes={statsData?.recent_minutes_listened}
             compact
           />
-        </div>
+        </section>
       </div>
 
       {/* Modal */}

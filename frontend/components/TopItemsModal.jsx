@@ -18,7 +18,7 @@ function TopItemsModal({ isOpen, onClose, items, title, type, activeRange, range
         </div>
 
         {rangeOptions.length > 0 && (
-          <div className="p-4 border-b border-border flex items-center gap-4">
+          <div className="px-6 py-4 border-b border-border flex items-center gap-4">
             <div className="text-sm text-gray-400">Time range:</div>
             <div className="flex gap-2">
               {rangeOptions.map(range => (
@@ -37,9 +37,9 @@ function TopItemsModal({ isOpen, onClose, items, title, type, activeRange, range
 
         <div className="modal-content">
           {items.length === 0 ? (
-            <div className="p-4 text-sm text-gray-400">No data available for this range.</div>
+            <div className="p-6 text-sm text-gray-400">No data available for this range.</div>
           ) : (
-            <div className="modal-list">
+            <div className="modal-list px-6">
               {items.map((item, index) => (
                 <div key={index} className="modal-list-item">
                   <div className="modal-rank text-lg font-bold text-text-muted">{index + 1}</div>

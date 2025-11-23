@@ -108,8 +108,8 @@ export default function ColorBends({
   scale = 1.4,
   frequency = 1,
   warpStrength = 1,
-  mouseInfluence = 0.8,
-  parallax = 0.5,
+  mouseInfluence = 0,
+  parallax = 0,
   noise = 0.1
 }) {
   const containerRef = useRef(null)
@@ -276,6 +276,7 @@ export default function ColorBends({
 
   useEffect(() => {
     if (!materialRef.current) return undefined
+    if (mouseInfluence <= 0 && parallax <= 0) return undefined
 
     const handlePointerMove = e => {
       const container = containerRef.current
@@ -290,7 +291,7 @@ export default function ColorBends({
     return () => {
       window.removeEventListener('pointermove', handlePointerMove)
     }
-  }, [])
+  }, [mouseInfluence, parallax])
 
   return <div ref={containerRef} className={`color-bends-container ${className}`.trim()} style={style} />
 }

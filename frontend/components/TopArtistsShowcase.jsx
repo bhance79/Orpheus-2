@@ -22,19 +22,28 @@ function TopArtistsShowcase({ artists, activeRange, rangeOptions, rangeLabels, o
     return (
       <>
         <div className="card-header">
-          <div className="card-controls">
-            <select
-              value={activeRange}
-              onChange={(e) => onRangeChange(e.target.value)}
-              className="text-xs bg-bg-input border-0 rounded px-2 py-1"
-            >
+          <div className="spotlight-header w-full">
+            <p className="feature-label m-0">Top artists</p>
+            <div className="spotlight-actions">
               {rangeOptions.map(range => (
-                <option key={range} value={range}>{rangeLabels[range] || range}</option>
+                <button
+                  key={range}
+                  type="button"
+                  className={`spotlight-edit ${activeRange === range ? 'spotlight-edit--active' : ''}`}
+                  onClick={() => onRangeChange(range)}
+                >
+                  {rangeLabels[range] || range}
+                </button>
               ))}
-            </select>
-            <button onClick={onShowMore} className="text-xs text-white/80 hover:text-white/60">
-              More
-            </button>
+              <button
+                onClick={onShowMore}
+                type="button"
+                className={`link-btn ${!canShowMore ? 'link-btn--disabled' : ''}`}
+                disabled={!canShowMore}
+              >
+                Show all
+              </button>
+            </div>
           </div>
         </div>
         <div className="card-content">
@@ -64,38 +73,26 @@ function TopArtistsShowcase({ artists, activeRange, rangeOptions, rangeLabels, o
 
   return (
     <div className="card mb-6 top-artists-card">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-        <div>
-          <div className="text-sm text-gray-400 uppercase tracking-wide">Spotlight</div>
-          <h3 className="text-2xl font-semibold">Your Top Artists</h3>
-          <div className="text-sm text-gray-400">
-            Range: <span className="text-white font-semibold">{rangeLabels[activeRange] || activeRange}</span>
-          </div>
-        </div>
-        <div className="flex flex-col gap-2 items-start sm:items-end">
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Select artist range">
-            {rangeOptions.map(range => (
-              <button
-                key={range}
-                type="button"
-                className={`px-3 py-1 text-xs font-medium rounded-full border transition ${
-                  activeRange === range
-                    ? 'bg-white/20 text-white border-white/30'
-                    : 'border-gray-600 text-gray-400 hover:text-white'
-                }`}
-                onClick={() => onRangeChange(range)}
-              >
-                {rangeLabels[range] || range}
-              </button>
-            ))}
-          </div>
+      <div className="flex items-center justify-between mb-4">
+        <p className="feature-label m-0">Top Artists</p>
+        <div className="flex items-center gap-2">
+          {rangeOptions.map(range => (
+            <button
+              key={range}
+              type="button"
+              className={`spotlight-edit ${activeRange === range ? 'spotlight-edit--active' : ''}`}
+              onClick={() => onRangeChange(range)}
+            >
+              {rangeLabels[range] || range}
+            </button>
+          ))}
           <button
             type="button"
             className={`link-btn ${!canShowMore ? 'link-btn--disabled' : ''}`}
             disabled={!canShowMore}
             onClick={onShowMore}
           >
-            View full list
+            Show all
           </button>
         </div>
       </div>

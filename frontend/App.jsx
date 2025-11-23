@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import ViewTracks from './pages/ViewTracks'
 import RemoveDuplicates from './pages/RemoveDuplicates'
 import FilterSweep from './pages/FilterSweep'
+import CrateDigger from './pages/CrateDigger'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(null)
@@ -56,6 +57,7 @@ function App() {
           <Route path="/view-tracks" element={<ViewTracks />} />
           <Route path="/remove-duplicates" element={<RemoveDuplicates />} />
           <Route path="/filter-sweep" element={<FilterSweep />} />
+          <Route path="/cratedigger" element={<CrateDigger />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>

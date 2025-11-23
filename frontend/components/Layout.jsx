@@ -11,6 +11,7 @@ function Layout({ children, user }) {
     { path: '/', label: 'Dashboard', icon: 'home-icon-w.png' },
     { path: '/view-tracks', label: 'View Tracks', icon: 'playlist-view-w.png' },
     { path: '/remove-duplicates', label: 'Remove Duplicates', icon: 'remove-dupes-w.png' },
+    { path: '/cratedigger', label: 'CrateDigger', icon: 'playlist-view-w.png' },
     { path: '/filter-sweep', label: 'Filter Sweep', icon: 'sweep-icon-w.png' },
   ]
 
@@ -45,7 +46,7 @@ function Layout({ children, user }) {
                 ease="power2.easeOut"
                 baseColor="rgba(255, 255, 255, 0.1)"
                 pillColor="rgba(15, 23, 42, 0.3)"
-                hoveredPillTextColor="#ffffff"
+                hoveredPillTextColor="#000000"
                 pillTextColor="#ffffff"
                 initialLoadAnimation={false}
               />

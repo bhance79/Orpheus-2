@@ -4,19 +4,28 @@ function TopTracks({ tracks, activeRange, rangeOptions, rangeLabels, onRangeChan
   if (compact) {
     return (
       <>
-        <div className="card-header">
-          <div className="card-controls">
-            <select
-              value={activeRange}
-              onChange={(e) => onRangeChange(e.target.value)}
-              className="text-xs bg-bg-input border-0 rounded px-2 py-1"
+        <div className="spotlight-header">
+          <div>
+            <p className="feature-label m-0">Top tracks</p>
+          </div>
+          <div className="spotlight-actions">
+            {rangeOptions.map(range => (
+              <button
+                key={range}
+                type="button"
+                className={`spotlight-edit ${activeRange === range ? 'spotlight-edit--active' : ''}`}
+                onClick={() => onRangeChange(range)}
+              >
+                {rangeLabels[range] || range}
+              </button>
+            ))}
+            <button
+              type="button"
+              className={`link-btn ${!canShowMore ? 'link-btn--disabled' : ''}`}
+              disabled={!canShowMore}
+              onClick={onShowMore}
             >
-              {rangeOptions.map(range => (
-                <option key={range} value={range}>{rangeLabels[range] || range}</option>
-              ))}
-            </select>
-            <button onClick={onShowMore} className="text-xs text-white/80 hover:text-white/60">
-              More
+              Show all
             </button>
           </div>
         </div>
@@ -46,37 +55,26 @@ function TopTracks({ tracks, activeRange, rangeOptions, rangeLabels, onRangeChan
 
   return (
     <div className="card mb-6">
-      <div className="flex items-center justify-between mb-3 gap-4">
-        <div>
-          <h3 className="text-lg font-semibold">Top Tracks</h3>
-          <div className="text-sm text-gray-400">
-            Range: <span className="text-white font-semibold">{rangeLabels[activeRange] || activeRange}</span>
-          </div>
-        </div>
-        <div className="flex flex-col gap-2 items-start sm:items-end">
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Select track range">
-            {rangeOptions.map(range => (
-              <button
-                key={range}
-                type="button"
-                className={`px-3 py-1 text-xs font-medium rounded-full border transition ${
-                  activeRange === range
-                    ? 'bg-white/20 text-white border-white/30'
-                    : 'border-gray-600 text-gray-400 hover:text-white'
-                }`}
-                onClick={() => onRangeChange(range)}
-              >
-                {rangeLabels[range] || range}
-              </button>
-            ))}
-          </div>
+      <div className="flex items-center justify-between mb-3">
+        <p className="feature-label m-0">Top Tracks</p>
+        <div className="flex items-center gap-2">
+          {rangeOptions.map(range => (
+            <button
+              key={range}
+              type="button"
+              className={`spotlight-edit ${activeRange === range ? 'spotlight-edit--active' : ''}`}
+              onClick={() => onRangeChange(range)}
+            >
+              {rangeLabels[range] || range}
+            </button>
+          ))}
           <button
             type="button"
             className={`link-btn ${!canShowMore ? 'link-btn--disabled' : ''}`}
             disabled={!canShowMore}
             onClick={onShowMore}
           >
-            Show more
+            Show all
           </button>
         </div>
       </div>

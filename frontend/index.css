@@ -26,7 +26,7 @@
 
   /* Panel Navigation Bar (inside container) */
   .panel-navbar {
-    @apply flex items-center justify-between gap-4 bg-transparent relative;
+    @apply flex items-center justify-between gap-4 bg-transparent relative mb-3 md:mb-4;
   }
 
   .navbar-left {
@@ -103,7 +103,7 @@
   }
 
   .main-content {
-    @apply flex-1 flex items-center justify-center p-4 relative z-10;
+    @apply flex-1 flex items-start justify-center p-4 relative z-10;
     min-height: 100vh;
   }
 
@@ -111,8 +111,8 @@
   .dashboard-panel {
     @apply w-full flex flex-col gap-3 p-4 relative;
     max-width: min(1800px, calc(100vw - 80px));
-    height: calc(100vh - 80px);
-    min-height: calc(100vh - 80px);
+    height: calc(100vh - 40px);
+    min-height: calc(100vh - 40px);
     background: transparent;
     border: none;
     box-shadow: none;
@@ -160,6 +160,13 @@
 
   .dashboard-card--spotlight {
     grid-area: spotlight;
+    min-height: 320px;
+    max-height: 320px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    @apply border-0;
   }
 
   .dashboard-card--tracks {
@@ -184,7 +191,7 @@
   }
 
   .welcome-card {
-    @apply flex flex-col gap-6 h-full;
+    @apply flex flex-col items-center text-center gap-6 h-full;
   }
 
   .welcome-copy {
@@ -200,7 +207,7 @@
   }
 
   .welcome-avatar {
-    @apply w-28 h-28 rounded-full object-cover border-2 border-white/20;
+    @apply w-40 h-40 rounded-full object-cover border-2 border-white/20 mx-auto;
   }
 
   .welcome-avatar--placeholder {
@@ -531,6 +538,69 @@
     @apply opacity-50 cursor-not-allowed;
   }
 
+  /* Toggle pills (range selector) */
+  .pill-toggle-group {
+    @apply flex items-center justify-end gap-2 flex-wrap;
+  }
+
+  .pill-toggle {
+    @apply inline-flex items-center px-3 py-1.5 rounded-full border text-[11px] font-semibold uppercase transition;
+    letter-spacing: 0.2em;
+    background: transparent;
+    border-color: rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.75);
+  }
+
+  .pill-toggle:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.35);
+  }
+
+  .pill-toggle--active {
+    background: rgba(255, 255, 255, 0.18);
+    color: #0f172a;
+    border-color: rgba(255, 255, 255, 0.6);
+  }
+
+  /* Small variant for corner positioning */
+  .pill-toggle-group--small {
+    @apply gap-1;
+  }
+
+  .pill-toggle--small {
+    @apply px-2 py-1 text-[9px];
+    letter-spacing: 0.15em;
+  }
+
+  /* Mini variant - matches spotlight edit button sizing */
+  .pill-toggle-group--mini {
+    @apply gap-0.5;
+  }
+
+  .pill-toggle--mini {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    padding: 0.4rem 0.9rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.7);
+    background-color: transparent;
+    transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+  }
+
+  .pill-toggle--mini:hover {
+    color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  .pill-toggle--mini.pill-toggle--active {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+
   /* Spotlight card styles */
   .spotlight-header {
     @apply flex items-start justify-between gap-4;
@@ -563,6 +633,46 @@
     border-color: rgba(255, 255, 255, 0.4);
   }
 
+  .spotlight-edit--active {
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.4);
+    background-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .range-select {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    padding: 0.4rem 0.9rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.7);
+    background-color: transparent;
+    transition: color 0.2s ease, border-color 0.2s ease;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='rgba(255,255,255,0.7)' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+    padding-right: 2rem;
+  }
+
+  .range-select:hover {
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+
+  .range-select:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+
+  .range-select option {
+    background-color: #1a1a2e;
+    color: #ffffff;
+  }
+
   .spotlight-clear {
     border-color: rgba(255, 255, 255, 0.1);
     color: rgba(255, 255, 255, 0.5);
@@ -573,11 +683,12 @@
   }
 
   .spotlight-body {
-    @apply flex items-center gap-4 flex-wrap;
+    @apply flex flex-col md:flex-row items-center justify-start gap-6 flex-1 text-center md:text-left;
+    margin-top: -8px;
   }
 
   .spotlight-cover {
-    width: 140px;
+    width: 180px;
     aspect-ratio: 1 / 1;
     border-radius: 24px;
     background-color: rgba(255, 255, 255, 0.05);
@@ -598,7 +709,7 @@
   }
 
   .spotlight-info {
-    @apply flex-1 min-w-0 flex flex-col gap-2;
+    @apply flex-1 min-w-0 flex flex-col gap-3 items-center md:items-start text-center md:text-left;
   }
 
   .spotlight-label {
@@ -607,11 +718,11 @@
   }
 
   .spotlight-title {
-    @apply text-2xl font-semibold text-white leading-tight;
+    @apply text-3xl font-semibold text-white leading-tight;
   }
 
   .spotlight-artist {
-    @apply text-sm text-white/70;
+    @apply text-base text-white/80;
   }
 
   .spotlight-caption {
@@ -619,7 +730,14 @@
   }
 
   .spotlight-search {
-    @apply flex flex-col gap-3 mt-4;
+    @apply flex flex-col gap-2 mt-2 flex-1;
+    min-height: 200px;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+
+  .spotlight-search-filters {
+    @apply flex flex-wrap gap-2;
   }
 
   .spotlight-search-bar {
@@ -643,6 +761,10 @@
     @apply flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition text-left;
   }
 
+  .spotlight-result-item.is-selected {
+    @apply border border-white/30 bg-white/10;
+  }
+
   .spotlight-result-thumb {
     @apply w-10 h-10 rounded-xl object-cover bg-white/10;
   }
@@ -663,5 +785,13 @@
 
   .spotlight-result-artist {
     @apply text-xs text-white/60 truncate;
+  }
+
+  .spotlight-editor-actions {
+    @apply flex items-center justify-end gap-3 mt-3;
+  }
+
+  .spotlight-selected {
+    @apply mt-2 border border-white/10 rounded-xl p-3 bg-white/5;
   }
 }

@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
+import PillNav from './PillNav'
 
 const ColorBends = lazy(() => import('./ColorBends'))
 
@@ -30,21 +31,24 @@ function Layout({ children, user }) {
                 <img src="/static/icons/home-icon-w.png" alt="Orpheus Logo" className="navbar-logo" />
                 <span className="navbar-title">Orpheus</span>
               </Link>
+            </div>
 
-              {/* Navigation Items */}
-              <div className="navbar-group">
-                <nav className="navbar-nav">
-                  {navItems.map(item => (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      className={`navbar-item ${location.pathname === item.path ? 'active' : ''}`}
-                    >
-                      <span className="navbar-label">{item.label}</span>
-                    </Link>
-                  ))}
-                </nav>
-              </div>
+            {/* Centered Navigation Items */}
+            <div className="navbar-center">
+              <PillNav
+                items={navItems.map(item => ({
+                  label: item.label,
+                  href: item.path
+                }))}
+                activeHref={location.pathname}
+                className="glass-nav"
+                ease="power2.easeOut"
+                baseColor="rgba(255, 255, 255, 0.1)"
+                pillColor="rgba(15, 23, 42, 0.3)"
+                hoveredPillTextColor="#ffffff"
+                pillTextColor="#ffffff"
+                initialLoadAnimation={false}
+              />
             </div>
 
             {/* User & Logout */}

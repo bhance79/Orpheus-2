@@ -26,11 +26,15 @@
 
   /* Panel Navigation Bar (inside container) */
   .panel-navbar {
-    @apply flex items-center justify-between gap-4 bg-transparent;
+    @apply flex items-center justify-between gap-4 bg-transparent relative;
   }
 
   .navbar-left {
-    @apply flex items-center gap-3 flex-1 min-w-0;
+    @apply flex items-center gap-3 min-w-0;
+  }
+
+  .navbar-center {
+    @apply absolute left-1/2 -translate-x-1/2;
   }
 
   .navbar-group {

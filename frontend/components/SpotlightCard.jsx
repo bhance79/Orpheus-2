@@ -172,29 +172,26 @@ function SpotlightCard({ fallbackTrack, trackRangeLabel }) {
         </div>
       ) : (
         <div className="spotlight-body">
-          <div className="spotlight-cover">
+          <article className="spotlight-image-card">
             {spotlightDisplay?.image ? (
-              <img src={spotlightDisplay.image} alt={spotlightDisplay.name} />
+              <img
+                src={spotlightDisplay.image}
+                alt={spotlightDisplay.name}
+                className="spotlight-image-card__img"
+              />
             ) : (
-              <div className="spotlight-cover--placeholder">Album cover</div>
+              <div className="spotlight-image-card__placeholder">Album cover</div>
             )}
-          </div>
-          <div className="spotlight-info">
-            <p className="spotlight-label">
-              {spotlightDisplay?.album || (spotlightDisplay?.type === 'album' ? 'Album' : 'Track')}
-            </p>
-            <h3 className="spotlight-title">
-              {spotlightDisplay?.name || 'Choose something to feature'}
-            </h3>
-            <p className="spotlight-artist">
-              {spotlightDisplay?.artist || spotlightDisplay?.artists || 'Use edit to search Spotify.'}
-            </p>
-            {spotlightDisplay && !spotlightItem && trackRangeLabel && (
-              <p className="spotlight-caption">
-                Auto-filled from your {trackRangeLabel.toLowerCase()} top tracks.
+            <div className="spotlight-image-card__gradient"></div>
+            <div className="spotlight-image-card__content">
+              <h3 className="spotlight-image-card__title">
+                {spotlightDisplay?.name || 'Choose something to feature'}
+              </h3>
+              <p className="spotlight-image-card__artist">
+                {spotlightDisplay?.artist || spotlightDisplay?.artists || 'Use edit to search Spotify.'}
               </p>
-            )}
-          </div>
+            </div>
+          </article>
         </div>
       )}
     </>

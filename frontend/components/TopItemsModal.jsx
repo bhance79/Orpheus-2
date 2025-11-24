@@ -1,3 +1,5 @@
+import AnimatedList from './AnimatedList'
+
 function TopItemsModal({ isOpen, onClose, items, title, type, activeRange, rangeOptions, rangeLabels, onRangeChange }) {
   if (!isOpen) return null
 
@@ -40,55 +42,62 @@ function TopItemsModal({ isOpen, onClose, items, title, type, activeRange, range
             <div className="p-6 text-sm text-gray-400">No data available for this range.</div>
           ) : (
             <div className="modal-list px-6">
-              {items.map((item, index) => (
-                <div key={index} className="modal-list-item">
-                  <div className="modal-rank text-lg font-bold text-text-muted">{index + 1}</div>
-                  <div className="modal-body flex-1">
-                    {type === 'artists' ? (
-                      <div className="flex items-center gap-4">
-                        {item.image ? (
-                          <img src={item.image} alt={item.name} className="w-16 h-16 rounded-full object-cover" />
-                        ) : (
-                          <div className="w-16 h-16 rounded-full bg-gray-700"></div>
-                        )}
-                        <div className="flex-1">
+              <AnimatedList
+                key={activeRange}
+                items={items}
+                renderItem={(item, index) => (
+                  type === 'artists' ? (
+                    <div className="flex items-center gap-4">
+                      <div className="text-lg text-gray-400 w-7">{index + 1}.</div>
+                      {item.image ? (
+                        <img src={item.image} alt={item.name} className="w-14 h-14 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-14 h-14 rounded-full bg-gray-700"></div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-lg font-medium hover:text-white/70"
+                        >
+                          {item.name}
+                        </a>
+                        <div className="text-base text-gray-400 truncate">
+                          {item.genres && item.genres.length ? item.genres.join(', ') : 'Genre unavailable'}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-4">
+                      <div className="text-lg text-gray-400 w-7">{index + 1}.</div>
+                      {item.cover ? (
+                        <img src={item.cover} alt={item.name} className="w-14 h-14 rounded-xl object-cover" />
+                      ) : (
+                        <div className="w-14 h-14 rounded-xl bg-gray-700"></div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-lg font-medium">
                           <a
                             href={item.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-lg font-medium hover:text-white/70"
+                            className="hover:text-white/70"
                           >
                             {item.name}
                           </a>
-                          <div className="text-sm text-gray-400">
-                            {item.genres && item.genres.length ? item.genres.join(', ') : 'Genre unavailable'}
-                          </div>
                         </div>
+                        <div className="text-base text-gray-400 truncate">{item.artists}</div>
                       </div>
-                    ) : (
-                      <div className="flex items-center gap-4">
-                        {item.cover ? (
-                          <img src={item.cover} alt={item.name} className="w-16 h-16 rounded object-cover" />
-                        ) : (
-                          <div className="w-16 h-16 rounded bg-gray-700"></div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <a
-                            href={item.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-lg font-medium hover:text-white/70 block truncate"
-                          >
-                            {item.name}
-                          </a>
-                          <div className="text-sm text-gray-400 truncate">{item.artists}</div>
-                          <div className="text-sm text-gray-500 truncate">{item.album || 'Album unavailable'}</div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+                      <div className="text-base text-gray-500 truncate text-right max-w-[200px]">{item.album || 'Album unavailable'}</div>
+                    </div>
+                  )
+                )}
+                showGradients={true}
+                enableArrowNavigation={true}
+                displayScrollbar={true}
+                itemSpacing="0.75rem"
+              />
             </div>
           )}
         </div>

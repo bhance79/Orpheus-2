@@ -1,14 +1,21 @@
+import { useMemo, useCallback, useState, useEffect } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
-import { useCallback } from 'react'
 
 function TopArtistsShowcase({ artists, activeRange, rangeOptions, rangeLabels, onRangeChange, onShowMore, canShowMore, compact }) {
-  const heroArtists = artists.slice(0, compact ? 5 : 15)
-
+  const heroArtists = useMemo(() => artists.slice(0, compact ? 5 : 20), [artists, compact])
   const [emblaRef, emblaApi] = useEmblaCarousel({
-    align: 'start',
-    containScroll: 'trimSnaps',
-    dragFree: true
+    loop: false,
+    align: 'start'
   })
+  const [selectedIndex, setSelectedIndex] = useState(0)
+
+  useEffect(() => {
+    if (!emblaApi) return
+    const onSelect = () => setSelectedIndex(emblaApi.selectedScrollSnap())
+    emblaApi.on('select', onSelect)
+    onSelect()
+    return () => emblaApi.off('select', onSelect)
+  }, [emblaApi])
 
   const scrollPrev = useCallback(() => {
     if (emblaApi) emblaApi.scrollPrev()
@@ -72,10 +79,12 @@ function TopArtistsShowcase({ artists, activeRange, rangeOptions, rangeLabels, o
   }
 
   return (
-    <div className="card mb-6 top-artists-card">
-      <div className="flex items-center justify-between mb-4">
-        <p className="feature-label m-0">Top Artists</p>
-        <div className="flex items-center gap-2">
+    <div className="top-artists-card">
+      <div className="flex items-start justify-between gap-4 mb-1">
+        <div>
+          <p className="feature-label m-0">Top artists</p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           {rangeOptions.map(range => (
             <button
               key={range}
@@ -97,78 +106,70 @@ function TopArtistsShowcase({ artists, activeRange, rangeOptions, rangeLabels, o
         </div>
       </div>
 
-      <div className="relative">
-        {/* Carousel Navigation */}
-        <div className="absolute -top-12 right-0 flex gap-2 z-10">
-          <button
-            onClick={scrollPrev}
-            className="w-8 h-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition"
-            aria-label="Previous"
-          >
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <button
-            onClick={scrollNext}
-            className="w-8 h-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition"
-            aria-label="Next"
-          >
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Embla Carousel */}
-        <div className="overflow-hidden" ref={emblaRef}>
-          <div className="flex gap-6">
-            {heroArtists.length === 0 ? (
-              <div className="text-sm text-gray-400">No artist data available yet.</div>
-            ) : (
-              heroArtists.map((artist, index) => {
-                const primaryGenre = artist.genres && artist.genres.length > 0 ? artist.genres[0] : null
-                const bio = artist.bio || (primaryGenre
-                  ? `${artist.name} is a ${primaryGenre} artist.`
-                  : `${artist.name} is an artist.`)
+      {heroArtists.length === 0 ? (
+        <div className="text-sm text-gray-400">No artist data available yet.</div>
+      ) : (
+        <div className="top-artists-carousel-wrapper">
+          <div className="top-artists-carousel__viewport" ref={emblaRef}>
+            <div className="top-artists-carousel__container">
+              {heroArtists.map((artist, index) => {
+                const primaryGenre = artist.genres?.[0]
 
                 return (
-                  <div key={artist.id || index} className="artist-hero-card flex-shrink-0 w-64 sm:w-72 md:w-80">
-                    <div className="relative w-full aspect-square rounded-3xl overflow-hidden shadow-2xl bg-gray-900">
-                      {artist.image ? (
-                        <img
-                          src={artist.image}
-                          alt={artist.name}
-                          className="absolute inset-0 w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 bg-gray-700"></div>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none"></div>
-                      <div className="absolute bottom-3 left-3 text-sm font-semibold text-white bg-black/60 rounded-full px-3 py-1">
-                        #{index + 1}
+                  <div className="top-artists-carousel__slide" key={artist.id || index}>
+                    <div className="top-artists-carousel">
+                      <div className="top-artists-carousel__avatar">
+                        {artist.image ? <img src={artist.image} alt={artist.name} /> : <span>artist avatar</span>}
                       </div>
-                    </div>
-                    <div className="mt-3">
-                      <div className="font-semibold text-lg text-white truncate">
-                        <a href={artist.url} target="_blank" rel="noopener noreferrer" className="hover:text-white/70">
-                          {artist.name}
-                        </a>
+                      <div className="top-artists-carousel__content">
+                        <div className="top-artists-carousel__header">
+                          <div>
+                            <p className="top-artists-carousel__eyebrow"></p>
+                            <h3>
+                              <a href={artist.url} target="_blank" rel="noopener noreferrer">
+                                {artist.name}
+                              </a>
+                            </h3>
+                            <p className="top-artists-carousel__genre">{primaryGenre || 'Genre unavailable'}</p>
+                          </div>
+                        </div>
+                        {artist.bio && <p className="top-artists-carousel__bio">{artist.bio}</p>}
                       </div>
-                      {primaryGenre ? (
-                        <div className="text-xs uppercase tracking-wide text-white/70">{primaryGenre}</div>
-                      ) : (
-                        <div className="text-xs text-gray-500">Genre unavailable</div>
-                      )}
-                      <p className="text-sm text-gray-300 mt-2 leading-snug line-clamp-3">{bio}</p>
                     </div>
                   </div>
                 )
-              })
-            )}
+              })}
+            </div>
           </div>
+          {heroArtists.length > 1 && (
+            <>
+              <div className="top-artists-carousel__nav">
+                <button type="button" onClick={scrollPrev} aria-label="Previous artist">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <button type="button" onClick={scrollNext} aria-label="Next artist">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+              <div className="top-artists-carousel__dots">
+                {heroArtists.map((_, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    className={`top-artists-carousel__dot ${index === selectedIndex ? 'top-artists-carousel__dot--active' : ''}`}
+                    onClick={() => emblaApi?.scrollTo(index)}
+                    aria-label={`Go to artist ${index + 1}`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
-      </div>
+      )}
     </div>
   )
 }

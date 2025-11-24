@@ -153,6 +153,9 @@ function Dashboard({ initialData }) {
           />
         </section>
 
+        {/* Spacer column */}
+        <section className="dashboard-card dashboard-card--spacer" aria-hidden="true" />
+
         {/* Top Artists */}
         <section className="dashboard-card dashboard-card--artists">
           <TopArtistsShowcase
@@ -163,7 +166,6 @@ function Dashboard({ initialData }) {
             onRangeChange={setActiveArtistRange}
             onShowMore={() => openModal('artists')}
             canShowMore={canShowArtists}
-            compact
           />
         </section>
 
@@ -184,7 +186,6 @@ function Dashboard({ initialData }) {
 
         {/* Extra container */}
         <section className="dashboard-card dashboard-card--extra">
-          <p className="feature-label">Recently played</p>
           <RecentlyPlayed
             tracks={statsData?.recently_played || []}
             recentMinutes={statsData?.recent_minutes_listened}

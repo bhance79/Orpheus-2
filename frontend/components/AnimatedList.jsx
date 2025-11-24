@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { motion, useInView } from 'motion/react';
 import './AnimatedList.css';
 
-const AnimatedItem = ({ children, delay = 0, index, onMouseEnter, onClick }) => {
+const AnimatedItem = ({ children, delay = 0, index, onMouseEnter, onClick, itemSpacing }) => {
   const ref = useRef(null);
   const inView = useInView(ref, { amount: 0.5, triggerOnce: false });
   return (
@@ -14,7 +14,7 @@ const AnimatedItem = ({ children, delay = 0, index, onMouseEnter, onClick }) => 
       initial={{ scale: 0.7, opacity: 0 }}
       animate={inView ? { scale: 1, opacity: 1 } : { scale: 0.7, opacity: 0 }}
       transition={{ duration: 0.2, delay }}
-      style={{ marginBottom: '1rem', cursor: 'pointer' }}
+      style={{ marginBottom: itemSpacing, cursor: 'pointer' }}
     >
       {children}
     </motion.div>
@@ -30,7 +30,9 @@ const AnimatedList = ({
   itemClassName = '',
   displayScrollbar = true,
   initialSelectedIndex = -1,
-  renderItem
+  renderItem,
+  itemSpacing = '1rem',
+  maxHeight = null
 }) => {
   const listRef = useRef(null);
   const [selectedIndex, setSelectedIndex] = useState(initialSelectedIndex);
@@ -43,6 +45,10 @@ const AnimatedList = ({
     setTopGradientOpacity(Math.min(scrollTop / 50, 1));
     const bottomDistance = scrollHeight - (scrollTop + clientHeight);
     setBottomGradientOpacity(scrollHeight <= clientHeight ? 0 : Math.min(bottomDistance / 50, 1));
+  };
+
+  const handleMouseLeave = () => {
+    setSelectedIndex(initialSelectedIndex);
   };
 
   useEffect(() => {
@@ -93,8 +99,13 @@ const AnimatedList = ({
   }, [selectedIndex, keyboardNav]);
 
   return (
-    <div className={`scroll-list-container ${className}`}>
-      <div ref={listRef} className={`scroll-list ${!displayScrollbar ? 'no-scrollbar' : ''}`} onScroll={handleScroll}>
+    <div className={`scroll-list-container ${className}`} onMouseLeave={handleMouseLeave}>
+      <div
+        ref={listRef}
+        className={`scroll-list ${!displayScrollbar ? 'no-scrollbar' : ''}`}
+        onScroll={handleScroll}
+        style={maxHeight ? { maxHeight } : undefined}
+      >
         {items.map((item, index) => (
           <AnimatedItem
             key={index}
@@ -107,6 +118,7 @@ const AnimatedList = ({
                 onItemSelect(item, index);
               }
             }}
+            itemSpacing={itemSpacing}
           >
             <div className={`item ${selectedIndex === index ? 'selected' : ''} ${itemClassName}`}>
               {renderItem ? renderItem(item, index) : (

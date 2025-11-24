@@ -734,11 +734,15 @@ def api_user_stats():
             artist_ids = [a.get("id") for a in artists if a.get("id")]
             album = track.get("album") or {}
             album_images = album.get("images") or []
+            release_date = album.get("release_date") or ""
+            release_year = release_date[:4] if isinstance(release_date, str) else None
             return {
                 "name": track.get("name"),
                 "artists": ", ".join(a.get("name", "") for a in artists),
                 "url": (track.get("external_urls") or {}).get("spotify"),
                 "album": album.get("name"),
+                "album_year": release_year,
+                "album_id": album.get("id"),
                 "cover": album_images[0].get("url") if album_images else None,
                 "artist_ids": artist_ids,
             }
@@ -827,25 +831,38 @@ def api_search():
         # Process tracks
         if "tracks" in results:
             for track in results["tracks"]["items"]:
+                album_info = track.get("album") or {}
+                album_images = album_info.get("images") or []
+                release_date = album_info.get("release_date") or ""
+                release_year = release_date[:4] if isinstance(release_date, str) else None
                 items.append({
                     "type": "track",
-                    "name": track["name"],
-                    "artist": ", ".join(a["name"] for a in track["artists"]),
-                    "image": track["album"]["images"][0]["url"] if track["album"]["images"] else None,
-                    "id": track["id"],
-                    "uri": track["uri"]
+                    "name": track.get("name"),
+                    "artist": ", ".join(a.get("name") for a in (track.get("artists") or []) if a.get("name")),
+                    "image": album_images[0]["url"] if album_images else None,
+                    "id": track.get("id"),
+                    "uri": track.get("uri"),
+                    "album": album_info.get("name"),
+                    "album_id": album_info.get("id"),
+                    "album_year": release_year
                 })
 
         # Process albums
         if "albums" in results:
             for album in results["albums"]["items"]:
+                album_images = album.get("images") or []
+                release_date = album.get("release_date") or ""
+                release_year = release_date[:4] if isinstance(release_date, str) else None
                 items.append({
                     "type": "album",
-                    "name": album["name"],
-                    "artist": ", ".join(a["name"] for a in album["artists"]),
-                    "image": album["images"][0]["url"] if album["images"] else None,
-                    "id": album["id"],
-                    "uri": album["uri"]
+                    "name": album.get("name"),
+                    "artist": ", ".join(a.get("name") for a in (album.get("artists") or []) if a.get("name")),
+                    "image": album_images[0]["url"] if album_images else None,
+                    "id": album.get("id"),
+                    "uri": album.get("uri"),
+                    "album": album.get("name"),
+                    "album_id": album.get("id"),
+                    "album_year": release_year
                 })
 
         return jsonify({"ok": True, "results": items})
@@ -854,6 +871,60 @@ def api_search():
         return jsonify({"ok": False, "error": f"spotify_error:{e}"}), 500
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/albums/<album_id>")
+def api_album_details(album_id: str):
+    if not album_id:
+        return jsonify({"ok": False, "error": "missing_album_id"}), 400
+
+    try:
+        sp = get_sp()
+    except RuntimeError as err:
+        return jsonify({"ok": False, "error": str(err)}), 401
+
+    try:
+        album = sp.album(album_id) or {}
+    except SpotifyException as err:
+        status = err.http_status or 500
+        return jsonify({"ok": False, "error": "spotify_album_error", "details": err.msg}), status
+    except Exception as err:  # pragma: no cover - defensive
+        return jsonify({"ok": False, "error": "album_fetch_failed", "details": str(err)}), 500
+
+    release_date = album.get("release_date") or ""
+    release_year = release_date[:4] if isinstance(release_date, str) else None
+    images = album.get("images") or []
+    artists = [a.get("name") for a in (album.get("artists") or []) if a.get("name")]
+    cover = images[0].get("url") if images else None
+
+    tracks: List[Dict[str, Any]] = []
+    try:
+        track_page = sp.album_tracks(album_id, limit=50, offset=0) or {}
+        while True:
+            for tr in track_page.get("items") or []:
+                tracks.append({
+                    "id": tr.get("id"),
+                    "name": tr.get("name"),
+                    "number": tr.get("track_number"),
+                    "duration_ms": tr.get("duration_ms"),
+                })
+            if not track_page.get("next"):
+                break
+            track_page = sp.next(track_page) or {}
+    except Exception:
+        pass
+
+    payload = {
+        "id": album.get("id") or album_id,
+        "name": album.get("name"),
+        "artists": artists,
+        "release_year": release_year,
+        "cover": cover,
+        "spotify_url": (album.get("external_urls") or {}).get("spotify"),
+        "total_tracks": album.get("total_tracks"),
+        "tracks": tracks,
+    }
+    return jsonify({"ok": True, "album": payload})
 
 @app.route("/logout")
 def logout():

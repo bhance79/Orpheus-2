@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import AlbumPreviewOverlay from './AlbumPreviewOverlay'
 
 const SPOTLIGHT_STORAGE_KEY = 'orpheus_spotlight_selection'
 
@@ -9,6 +10,25 @@ function SpotlightCard({ fallbackTrack, trackRangeLabel }) {
   const [searchingSpotlight, setSearchingSpotlight] = useState(false)
   const [spotlightEditing, setSpotlightEditing] = useState(false)
   const [spotlightSearchType, setSpotlightSearchType] = useState('album')
+  const [previewTrack, setPreviewTrack] = useState(null)
+
+  const normalizeSpotlightItem = (item) => {
+    if (!item) return null
+    const cover = item.cover || item.image || null
+    const artistName = item.artist || item.artists || ''
+    const albumName = item.album || null
+    const albumId = item.album_id || (item.type === 'album' ? item.id : null)
+    return {
+      ...item,
+      artist: artistName,
+      artists: artistName,
+      image: cover,
+      cover,
+      album: albumName,
+      album_id: albumId,
+      album_year: item.album_year || null
+    }
+  }
 
   // Restore persisted spotlight selection on mount
   useEffect(() => {
@@ -16,8 +36,9 @@ function SpotlightCard({ fallbackTrack, trackRangeLabel }) {
       const saved = localStorage.getItem(SPOTLIGHT_STORAGE_KEY)
       if (saved) {
         const parsed = JSON.parse(saved)
-        if (parsed && parsed.name) {
-          setSpotlightItem(parsed)
+        const normalized = normalizeSpotlightItem(parsed)
+        if (normalized && normalized.name) {
+          setSpotlightItem(normalized)
         }
       }
     } catch (err) {
@@ -66,22 +87,51 @@ function SpotlightCard({ fallbackTrack, trackRangeLabel }) {
   }
 
   const selectSpotlightItem = (item) => {
-    setSpotlightItem(item)
+    const normalized = normalizeSpotlightItem(item)
+    if (!normalized) return
+    setSpotlightItem(normalized)
     setSpotlightSearch('')
     setSpotlightResults([])
     setSpotlightEditing(false)
   }
 
   const fallbackSpotlight = fallbackTrack
-    ? {
+    ? normalizeSpotlightItem({
         type: 'track',
         name: fallbackTrack.name,
         artist: fallbackTrack.artists,
         image: fallbackTrack.cover,
-        album: fallbackTrack.album
-      }
+        cover: fallbackTrack.cover,
+        album: fallbackTrack.album,
+        album_id: fallbackTrack.album_id,
+        album_year: fallbackTrack.album_year
+      })
     : null
   const spotlightDisplay = spotlightItem || fallbackSpotlight
+  const overlayPayload = spotlightDisplay && spotlightDisplay.album_id ? {
+    name: spotlightDisplay.name,
+    artists: spotlightDisplay.artist || spotlightDisplay.artists,
+    album: spotlightDisplay.album,
+    album_year: spotlightDisplay.album_year,
+    album_id: spotlightDisplay.album_id,
+    cover: spotlightDisplay.cover || spotlightDisplay.image
+  } : null
+
+  const handleSpotlightPreview = () => {
+    if (overlayPayload?.album_id) {
+      setPreviewTrack(overlayPayload)
+    }
+  }
+
+  const handleSpotlightKeyDown = (event) => {
+    if (!overlayPayload) return
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      handleSpotlightPreview()
+    }
+  }
+
+  const closePreview = () => setPreviewTrack(null)
 
   return (
     <>
@@ -172,7 +222,14 @@ function SpotlightCard({ fallbackTrack, trackRangeLabel }) {
         </div>
       ) : (
         <div className="spotlight-body">
-          <article className="spotlight-image-card">
+          <article
+            className={`spotlight-image-card ${overlayPayload ? 'spotlight-image-card--interactive' : ''}`}
+            role={overlayPayload ? 'button' : undefined}
+            tabIndex={overlayPayload ? 0 : -1}
+            aria-disabled={!overlayPayload}
+            onClick={overlayPayload ? handleSpotlightPreview : undefined}
+            onKeyDown={overlayPayload ? handleSpotlightKeyDown : undefined}
+          >
             {spotlightDisplay?.image ? (
               <img
                 src={spotlightDisplay.image}
@@ -194,6 +251,7 @@ function SpotlightCard({ fallbackTrack, trackRangeLabel }) {
           </article>
         </div>
       )}
+      {previewTrack && <AlbumPreviewOverlay track={previewTrack} onClose={closePreview} />}
     </>
   )
 }

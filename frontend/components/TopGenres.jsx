@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react'
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 
 // Color palette for pie chart slices
@@ -24,7 +25,79 @@ const CustomTooltip = ({ active, payload }) => {
   return null
 }
 
+// Function to extract parent genre from subgenre
+const getParentGenre = (genre) => {
+  if (!genre) return 'Unknown'
+
+  // Common patterns: "adjective genre" -> "genre"
+  // Examples: "progressive house" -> "house", "indie rock" -> "rock"
+  const parts = genre.toLowerCase().split(' ')
+
+  // If single word, return as-is (lowercase for grouping)
+  if (parts.length === 1) return parts[0]
+
+  // Return the last word as the parent genre (e.g., "progressive house" -> "house")
+  return parts[parts.length - 1]
+}
+
+// Function to capitalize first letter
+const capitalize = (str) => {
+  if (!str) return str
+  return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
+// Function to group genres by parent and sum percentages
+const groupByParentGenre = (genres) => {
+  const parentMap = {}
+
+  genres.forEach(({ genre, percentage }) => {
+    const parent = getParentGenre(genre)
+    const parentKey = parent.toLowerCase() // Use lowercase as key for grouping
+
+    if (!parentMap[parentKey]) {
+      parentMap[parentKey] = {
+        genre: capitalize(parent), // Store capitalized version for display
+        percentage: 0,
+        subgenres: []
+      }
+    }
+
+    parentMap[parentKey].percentage += percentage || 0
+    parentMap[parentKey].subgenres.push(genre)
+  })
+
+  // Convert to array and sort by percentage
+  return Object.values(parentMap)
+    .sort((a, b) => b.percentage - a.percentage)
+    .map(({ genre, percentage, subgenres }) => ({
+      genre,
+      percentage: Math.round(percentage * 10) / 10, // Round to 1 decimal
+      subgenreCount: subgenres.length,
+      subgenres: subgenres // Keep subgenres list for displaying
+    }))
+}
+
 function TopGenres({ genresData, activeSource, activeRange, rangeOptions, rangeLabels, onSourceChange, onRangeChange, compact }) {
+  const [selectedGenre, setSelectedGenre] = useState(null)
+  const popupRef = useRef(null)
+
+  // Close popup when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (popupRef.current && !popupRef.current.contains(event.target)) {
+        setSelectedGenre(null)
+      }
+    }
+
+    if (selectedGenre) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [selectedGenre])
+
   const genreSourceLabels = {
     artists: 'Artists',
     tracks: 'Tracks'
@@ -32,59 +105,107 @@ function TopGenres({ genresData, activeSource, activeRange, rangeOptions, rangeL
   const genreSourceOptions = ['artists', 'tracks']
 
   const sourceData = genresData[activeSource] || {}
-  const genres = sourceData[activeRange] || []
+  const rawGenres = sourceData[activeRange] || []
+  const genres = groupByParentGenre(rawGenres)
   const displayGenres = compact ? genres.slice(0, 5) : genres
 
   if (compact) {
     return (
       <>
         <div className="card-header">
-          <div className="card-controls">
-            <select
-              value={activeSource}
-              onChange={(e) => onSourceChange(e.target.value)}
-              className="text-xs bg-bg-input border-0 rounded px-2 py-1"
-            >
-              {genreSourceOptions.map(source => (
-                <option key={source} value={source}>{genreSourceLabels[source]}</option>
-              ))}
-            </select>
-            <select
-              value={activeRange}
-              onChange={(e) => onRangeChange(e.target.value)}
-              className="text-xs bg-bg-input border-0 rounded px-2 py-1"
-            >
-              {rangeOptions.map(range => (
-                <option key={range} value={range}>{rangeLabels[range] || range}</option>
-              ))}
-            </select>
+          <div className="spotlight-header w-full">
+            <p className="feature-label m-0">Top genres</p>
+            <div className="spotlight-actions">
+              <select
+                value={activeSource}
+                onChange={(e) => onSourceChange(e.target.value)}
+                className="genre-dropdown"
+              >
+                {genreSourceOptions.map(source => (
+                  <option key={source} value={source}>{genreSourceLabels[source]}</option>
+                ))}
+              </select>
+              <select
+                value={activeRange}
+                onChange={(e) => onRangeChange(e.target.value)}
+                className="genre-dropdown"
+              >
+                {rangeOptions.map(range => (
+                  <option key={range} value={range}>{rangeLabels[range] || range}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
-        <div className="card-content flex-1 flex items-center justify-center">
+        <div className="card-content flex-1 flex items-center -mx-2">
           {displayGenres.length === 0 ? (
             <div className="text-xs text-gray-400">No data</div>
           ) : (
-            <ResponsiveContainer width="100%" height={180}>
-              <PieChart>
-                <Tooltip content={<CustomTooltip />} />
-                <Pie
-                  data={displayGenres.map(g => ({ name: g.genre, value: g.percentage }))}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={40}
-                  outerRadius={70}
-                  stroke="none"
-                  startAngle={90}
-                  endAngle={-270}
-                >
-                  {displayGenres.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
+            <>
+              <div className="flex-1 -mr-10">
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Tooltip content={<CustomTooltip />} />
+                    <Pie
+                      data={displayGenres.map(g => ({ name: g.genre, value: g.percentage }))}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="42%"
+                      cy="50%"
+                      innerRadius={75}
+                      outerRadius={130}
+                      stroke="none"
+                      startAngle={90}
+                      endAngle={-270}
+                    >
+                      {displayGenres.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex flex-col gap-2.5 pr-8 -ml-4">
+                {displayGenres.map((genre, index) => (
+                  <div key={index} className="relative" ref={selectedGenre === genre.genre ? popupRef : null}>
+                    <div
+                      className={`flex items-center gap-2.5 ${genre.subgenreCount > 1 ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+                      onClick={() => genre.subgenreCount > 1 && setSelectedGenre(selectedGenre === genre.genre ? null : genre.genre)}
+                    >
+                      <div
+                        className="w-4 h-4 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-base font-medium text-white truncate max-w-[160px]">
+                          {genre.genre}
+                          {genre.subgenreCount > 1 && (
+                            <span className="text-xs text-gray-500 ml-1">
+                              ({genre.subgenreCount})
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-sm text-gray-400">
+                          {genre.percentage}%
+                        </span>
+                      </div>
+                    </div>
+                    {selectedGenre === genre.genre && genre.subgenreCount > 1 && (
+                      <div className="absolute left-0 top-full mt-1 bg-bg-elevated border border-white/20 rounded-lg px-3 py-2 shadow-xl z-10 min-w-[180px]">
+                        <div className="text-[10px] text-gray-400 uppercase tracking-wide mb-2">Subgenres</div>
+                        <div className="flex flex-col gap-1">
+                          {genre.subgenres.map((subgenre, idx) => (
+                            <div key={idx} className="text-xs text-white">
+                              • {subgenre}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </>

@@ -1,6 +1,12 @@
+import { useState } from 'react'
 import AnimatedList from './AnimatedList'
+import AlbumPreviewOverlay from './AlbumPreviewOverlay'
+import ArtistPreviewOverlay from './ArtistPreviewOverlay'
 
 function TopItemsModal({ isOpen, onClose, items, title, type, activeRange, rangeOptions, rangeLabels, onRangeChange }) {
+  const [selectedTrack, setSelectedTrack] = useState(null)
+  const [selectedArtist, setSelectedArtist] = useState(null)
+
   if (!isOpen) return null
 
   const handleBackdropClick = (e) => {
@@ -50,7 +56,12 @@ function TopItemsModal({ isOpen, onClose, items, title, type, activeRange, range
                     <div className="flex items-center gap-4">
                       <div className="text-lg text-gray-400 w-7">{index + 1}.</div>
                       {item.image ? (
-                        <img src={item.image} alt={item.name} className="w-14 h-14 rounded-full object-cover" />
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-14 h-14 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => setSelectedArtist(item)}
+                        />
                       ) : (
                         <div className="w-14 h-14 rounded-full bg-gray-700"></div>
                       )}
@@ -72,7 +83,12 @@ function TopItemsModal({ isOpen, onClose, items, title, type, activeRange, range
                     <div className="flex items-center gap-4">
                       <div className="text-lg text-gray-400 w-7">{index + 1}.</div>
                       {item.cover ? (
-                        <img src={item.cover} alt={item.name} className="w-14 h-14 rounded-xl object-cover" />
+                        <img
+                          src={item.cover}
+                          alt={item.name}
+                          className="w-14 h-14 rounded-xl object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => setSelectedTrack(item)}
+                        />
                       ) : (
                         <div className="w-14 h-14 rounded-xl bg-gray-700"></div>
                       )}
@@ -102,6 +118,20 @@ function TopItemsModal({ isOpen, onClose, items, title, type, activeRange, range
           )}
         </div>
       </div>
+
+      {selectedTrack && (
+        <AlbumPreviewOverlay
+          track={selectedTrack}
+          onClose={() => setSelectedTrack(null)}
+        />
+      )}
+
+      {selectedArtist && (
+        <ArtistPreviewOverlay
+          artist={selectedArtist}
+          onClose={() => setSelectedArtist(null)}
+        />
+      )}
     </div>
   )
 }

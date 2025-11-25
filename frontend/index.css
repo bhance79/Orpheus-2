@@ -5,7 +5,7 @@
 /* Custom base styles */
 @layer base {
   :root {
-    --glass-bg: linear-gradient(135deg, rgba(15, 23, 42, 0.479), rgba(15, 23, 42, 0.171));
+    --glass-bg: linear-gradient(135deg, rgba(15, 23, 42, 0.63), rgba(15, 23, 42, 0.333));
     --glass-highlight: radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.35), transparent 55%),
       radial-gradient(circle at 85% 85%, rgba(59, 130, 246, 0.25), transparent 60%);
     --glass-border: rgba(255, 255, 255, 0.12);
@@ -107,6 +107,10 @@
     min-height: 100vh;
   }
 
+  .main-content--centered {
+    @apply items-center justify-center;
+  }
+
   /* Centered Dashboard Panel */
   .dashboard-panel {
     @apply w-full flex flex-col gap-3 p-4 relative;
@@ -183,16 +187,21 @@
 
   .dashboard-card--extra {
     grid-area: extra;
+    @apply px-3;
+  }
+
+  .dashboard-card--extra .text-sm {
+    @apply text-base;
+  }
+
+  .dashboard-card--extra .text-\[11px\] {
+    font-size: 0.8125rem;
   }
 
   .dashboard-card--spacer {
     grid-area: spacer;
     display: none;
-    border: none;
-    box-shadow: none;
-    background: transparent;
     padding: 0;
-    pointer-events: none;
   }
 
   @media (min-width: 1024px) {
@@ -442,7 +451,7 @@
 
   .top-artists-carousel__avatar {
     flex-shrink: 0;
-    width: clamp(180px, 22vw, 250px);
+    width: clamp(200px, 24vw, 260px);
     aspect-ratio: 1 / 1;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.1);
@@ -561,7 +570,7 @@
     height: 8px;
     border-radius: 50%;
     border: none;
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(248, 248, 248, 0.557);
     padding: 0;
     cursor: pointer;
     transition: background 0.2s ease, transform 0.2s ease;
@@ -572,7 +581,7 @@
   }
 
   .top-artists-carousel__dot--active {
-    background: #ffffff;
+    background: #317fd2cf;
     transform: scale(1.2);
   }
 
@@ -770,7 +779,7 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #25d366;
+    background: #ffffff;
     display: inline-block;
   }
 
@@ -878,6 +887,33 @@
   select {
     @apply bg-bg-input border border-border text-text-primary rounded-lg px-4 py-2;
     @apply focus:outline-none focus:ring-2 focus:ring-white/40;
+  }
+
+  /* Glassmorphism dropdown for genre controls */
+  .genre-dropdown {
+    @apply text-sm border-0 rounded-lg px-3 py-2 text-white font-medium;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+  }
+
+  .genre-dropdown:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.25);
+  }
+
+  .genre-dropdown:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 0 0 2px rgba(255, 255, 255, 0.1);
+  }
+
+  .genre-dropdown option {
+    @apply bg-bg-elevated text-white;
   }
 
   /* Track table */

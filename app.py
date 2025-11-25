@@ -270,6 +270,15 @@ def list_owned_playlists(sp: spotipy.Spotify) -> List[Dict[str, Any]]:
 def list_all_playlists(sp: spotipy.Spotify) -> List[Dict[str, Any]]:
     return list(paginate(lambda o, l: sp.current_user_playlists(limit=l, offset=o)))
 
+def vite_running() -> bool:
+    """Check whether Vite dev server is running."""
+    try:
+        # __vite_ping is a built-in endpoint for dev server health
+        requests.get("http://127.0.0.1:5173/__vite_ping", timeout=0.3)
+        return True
+    except Exception:
+        return False
+
 # ---------- Routes ----------
 @app.route("/")
 def index():
@@ -304,18 +313,19 @@ def callback():
         sp = get_sp()
         user = sp.current_user()
         session["user_name"] = user.get("display_name", "User")
-        session["user_image"] = None
         images = user.get("images", [])
-        if images:
-            session["user_image"] = images[0].get("url")
+        session["user_image"] = images[0]["url"] if images else None
     except Exception:
-        # If profile fails, continue — not fatal
-        pass
+        pass  # not fatal
 
-    # In development, redirect to Vite dev server
-    if os.environ.get("FLASK_ENV") == "development" or app.debug:
-        return redirect("http://localhost:5173/")
-    return redirect(url_for("index"))
+    # --- AUTO-DETECT DEV OR PROD ---
+    if vite_running():
+        # Vite dev server running → go to dev hot reload UI
+        return redirect("http://127.0.0.1:5173/")
+    else:
+        # No Vite dev server → use production build
+        return redirect(url_for("index"))
+
 
 @app.route("/select", methods=["POST"])
 def select():
@@ -873,6 +883,60 @@ def api_search():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+@app.route("/api/artists/<artist_id>")
+def api_artist_details(artist_id: str):
+    if not artist_id:
+        return jsonify({"ok": False, "error": "missing_artist_id"}), 400
+
+    try:
+        sp = get_sp()
+    except RuntimeError as err:
+        return jsonify({"ok": False, "error": str(err)}), 401
+
+    try:
+        artist = sp.artist(artist_id) or {}
+    except SpotifyException as err:
+        status = err.http_status or 500
+        return jsonify({"ok": False, "error": "spotify_artist_error", "details": err.msg}), status
+    except Exception as err:
+        return jsonify({"ok": False, "error": "artist_fetch_failed", "details": str(err)}), 500
+
+    images = artist.get("images") or []
+    genres = artist.get("genres") or []
+    followers_raw = artist.get("followers") or {}
+    followers_total = followers_raw.get("total") if isinstance(followers_raw, dict) else None
+
+    # Get artist's top tracks
+    top_tracks_list: List[Dict[str, Any]] = []
+    try:
+        top_tracks = sp.artist_top_tracks(artist_id) or {}
+        for track in (top_tracks.get("tracks") or [])[:10]:
+            album = track.get("album") or {}
+            album_images = album.get("images") or []
+            top_tracks_list.append({
+                "id": track.get("id"),
+                "name": track.get("name"),
+                "cover": album_images[0].get("url") if album_images else None,
+                "album": album.get("name"),
+                "url": (track.get("external_urls") or {}).get("spotify"),
+            })
+    except Exception:
+        pass
+
+    payload = {
+        "id": artist.get("id") or artist_id,
+        "name": artist.get("name"),
+        "image": images[0].get("url") if images else None,
+        "genres": genres,
+        "followers": followers_total,
+        "popularity": artist.get("popularity"),
+        "spotify_url": (artist.get("external_urls") or {}).get("spotify"),
+        "top_tracks": top_tracks_list,
+    }
+
+    return jsonify({"ok": True, "artist": payload})
+
+
 @app.route("/api/albums/<album_id>")
 def api_album_details(album_id: str):
     if not album_id:
@@ -987,5 +1051,6 @@ def catch_all(path):
 
 # ---------- Entrypoint ----------
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # default 5000
-    app.run(host="0.0.0.0", port=port, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    debug = os.environ.get("FLASK_DEBUG", "0") == "1"
+    app.run(host="0.0.0.0", port=port, debug=debug)

@@ -6,6 +6,7 @@ import RecentlyPlayed from '../components/RecentlyPlayed'
 import TopItemsModal from '../components/TopItemsModal'
 import LoadingOverlay from '../components/LoadingOverlay'
 import SpotlightCard from '../components/SpotlightCard'
+import PixelCard from '../components/PixelCard'
 
 const TIME_RANGE_LABELS = {
   short_term: 'Last 4 Weeks',
@@ -18,8 +19,8 @@ function Dashboard({ initialData }) {
   const [statsData, setStatsData] = useState(initialData || null)
   const [activeArtistRange, setActiveArtistRange] = useState('short_term')
   const [activeTrackRange, setActiveTrackRange] = useState('short_term')
-  const [activeGenreSource, setActiveGenreSource] = useState('artists')
-  const [activeGenreRange, setActiveGenreRange] = useState('short_term')
+  const [activeGenreSource, setActiveGenreSource] = useState('tracks')
+  const [activeGenreRange, setActiveGenreRange] = useState('long_term')
   const [showModal, setShowModal] = useState(false)
   const [modalType, setModalType] = useState(null)
   const [rangeOptions, setRangeOptions] = useState(['short_term', 'medium_term', 'long_term'])
@@ -154,7 +155,9 @@ function Dashboard({ initialData }) {
         </section>
 
         {/* Spacer column */}
-        <section className="dashboard-card dashboard-card--spacer" aria-hidden="true" />
+        <section className="dashboard-card dashboard-card--spacer">
+          <PixelCard variant="blue" gap={8} speed={40} />
+        </section>
 
         {/* Top Artists */}
         <section className="dashboard-card dashboard-card--artists">
@@ -171,7 +174,6 @@ function Dashboard({ initialData }) {
 
         {/* Top Genres */}
         <section className="dashboard-card dashboard-card--genres">
-          <p className="feature-label">Top genres</p>
           <TopGenres
             genresData={statsData?.top_genres || { artists: {}, tracks: {} }}
             activeSource={activeGenreSource}

@@ -37,7 +37,7 @@ function RecentlyPlayed({ tracks, recentMinutes, compact }) {
             <p className="feature-label m-0">Recently Played</p>
           </div>
           {recentMinutes && (
-            <span className="text-[10px] text-gray-400">{recentMinutes} min</span>
+            <span className="text-[12px] text-gray-400">{recentMinutes} min</span>
           )}
         </div>
         <div className="card-content pb-2">
@@ -64,7 +64,7 @@ function RecentlyPlayed({ tracks, recentMinutes, compact }) {
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-lg font-semibold m-0">Recently Played</h3>
         {recentMinutes && (
-          <span className="text-sm text-gray-400">{recentMinutes} min</span>
+          <span className="text-base text-gray-400">{recentMinutes} min</span>
         )}
       </div>
 

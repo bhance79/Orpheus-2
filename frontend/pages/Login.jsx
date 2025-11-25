@@ -10,7 +10,7 @@ function Login() {
           <ColorBends transparent />
         </Suspense>
       </div>
-      <main className="main-content">
+      <main className="main-content main-content--centered">
         <div className="card max-w-md w-full mx-4 text-center backdrop-blur-lg">
           <h1 className="text-3xl font-bold mb-6">Orpheus 2.0</h1>
           <p className="text-text-secondary mb-8">

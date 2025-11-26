@@ -518,6 +518,10 @@ def api_playlist(playlist_id):
     try:
         sp = get_sp()
 
+        # Support pagination for large playlists
+        limit = request.args.get('limit', type=int)
+        offset = request.args.get('offset', default=0, type=int)
+
         if playlist_id == RECENT_ID:
             me = sp.me() or {}
             try:
@@ -564,8 +568,18 @@ def api_playlist(playlist_id):
         pl = sp.playlist(playlist_id)
         imgs = pl.get("images") or []
         img_url = imgs[0].get("url") if imgs else None
+        total_tracks = (pl.get("tracks") or {}).get("total", 0)
 
-        items = list(paginate(lambda o, l: sp.playlist_items(playlist_id, limit=l, offset=o)))
+        # If limit is specified, fetch only that many tracks
+        if limit is not None:
+            result = sp.playlist_items(playlist_id, limit=min(limit, 100), offset=offset)
+            items = result.get("items", [])
+            has_more = (offset + len(items)) < total_tracks
+        else:
+            # Fetch all tracks (original behavior)
+            items = list(paginate(lambda o, l: sp.playlist_items(playlist_id, limit=l, offset=o)))
+            has_more = False
+
         rows = []
         for it in items:
             tr = (it or {}).get("track") or {}
@@ -591,11 +605,13 @@ def api_playlist(playlist_id):
                 "id": pl.get("id"),
                 "name": pl.get("name"),
                 "owner": (pl.get("owner") or {}).get("display_name") or (pl.get("owner") or {}).get("id"),
-                "total": (pl.get("tracks") or {}).get("total"),
+                "total": total_tracks,
                 "url": (pl.get("external_urls") or {}).get("spotify"),
                 "image": img_url,
             },
             "tracks": rows,
+            "has_more": has_more,
+            "offset": offset,
         })
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500

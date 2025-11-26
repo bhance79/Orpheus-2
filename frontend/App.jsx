@@ -4,7 +4,6 @@ import Layout from './components/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import ViewPlaylists from './pages/ViewPlaylists'
-import RemoveDuplicates from './pages/RemoveDuplicates'
 import FilterSweep from './pages/FilterSweep'
 import CrateDigger from './pages/CrateDigger'
 
@@ -55,7 +54,6 @@ function App() {
         <Routes>
           <Route path="/" element={<Dashboard initialData={statsData} />} />
           <Route path="/view-playlists" element={<ViewPlaylists />} />
-          <Route path="/remove-duplicates" element={<RemoveDuplicates />} />
           <Route path="/filter-sweep" element={<FilterSweep />} />
           <Route path="/cratedigger" element={<CrateDigger />} />
           <Route path="*" element={<Navigate to="/" replace />} />

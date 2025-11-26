@@ -174,6 +174,9 @@ function AlbumPreviewOverlay({ track, onClose }) {
   const columnsContainerStyle = {
     display: 'flex',
     gap: '3rem',
+    maxHeight: '400px',
+    overflowY: 'auto',
+    paddingRight: '0.5rem',
   }
 
   const columnStyle = {

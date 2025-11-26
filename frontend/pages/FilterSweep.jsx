@@ -73,91 +73,93 @@ function FilterSweep() {
   }
 
   return (
-    <div className="container">
-      <h2 className="text-xl font-bold mb-2">Filter Sweep</h2>
-      <p className="text-text-secondary mb-4">
-        Remove from <strong>playlist A</strong> (must be owned by you) any tracks that also appear in one or more{' '}
-        <strong>playlist B</strong> selections.
-      </p>
+    <div className="dashboard-grid">
+      <section className="dashboard-card">
+        <h2 className="text-xl font-bold mb-2">Filter Sweep</h2>
+        <p className="text-text-secondary mb-4">
+          Remove from <strong>playlist A</strong> (must be owned by you) any tracks that also appear in one or more{' '}
+          <strong>playlist B</strong> selections.
+        </p>
 
-      {message && (
-        <div
-          className={`mb-6 p-4 rounded-lg border ${
-            message.type === 'error'
-              ? 'bg-red-900/20 border-red-700 text-red-200'
-              : 'bg-green-900/20 border-green-700 text-green-200'
-          }`}
-        >
-          {message.text}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit}>
-        <div className="mb-4">
-          <label htmlFor="playlist_a_id" className="block mb-2 text-sm font-medium">
-            Playlist A (Source):
-          </label>
-          <select
-            name="playlist_a_id"
-            id="playlist_a_id"
-            value={playlistA}
-            onChange={(e) => setPlaylistA(e.target.value)}
-            className="w-full"
-            disabled={playlistsLoading}
-            required
+        {message && (
+          <div
+            className={`mb-6 p-4 rounded-lg border ${
+              message.type === 'error'
+                ? 'bg-red-900/20 border-red-700 text-red-200'
+                : 'bg-green-900/20 border-green-700 text-green-200'
+            }`}
           >
-            <option value="">-- Choose a playlist --</option>
-            {ownedPlaylists.map(playlist => (
-              <option key={playlist.id} value={playlist.id}>
-                {playlist.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <label htmlFor="playlist_b_id" className="text-sm font-medium">
-              Playlist B (Reference — select one or more):
-            </label>
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-white/10 text-white/80 rounded-full text-xs font-medium">
-                {playlistBList.length} selected
-              </span>
-              <button type="button" onClick={handleDeselectAll} className="btn btn-secondary text-xs py-1 px-2">
-                Deselect All
-              </button>
-            </div>
+            {message.text}
           </div>
-          <select
-            name="playlist_b_id"
-            id="playlist_b_id"
-            multiple
-            size={10}
-            className="w-full"
-            value={playlistBList}
-            onChange={(e) => {
-              const selected = Array.from(e.target.selectedOptions, option => option.value)
-              setPlaylistBList(selected)
-            }}
-            disabled={playlistsLoading}
-            required
-          >
-            {playlists.map(playlist => (
-              <option key={playlist.id} value={playlist.id}>
-                {playlist.name}
-              </option>
-            ))}
-          </select>
-          <p className="text-xs text-text-muted mt-1">Hold Ctrl/Cmd to select multiple playlists</p>
-        </div>
+        )}
 
-        <button type="submit" className="btn btn-accent">
-          Run Filter Sweep
-        </button>
-      </form>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label htmlFor="playlist_a_id" className="block mb-2 text-sm font-medium">
+              Playlist A (Source):
+            </label>
+            <select
+              name="playlist_a_id"
+              id="playlist_a_id"
+              value={playlistA}
+              onChange={(e) => setPlaylistA(e.target.value)}
+              className="w-full"
+              disabled={playlistsLoading}
+              required
+            >
+              <option value="">-- Choose a playlist --</option>
+              {ownedPlaylists.map(playlist => (
+                <option key={playlist.id} value={playlist.id}>
+                  {playlist.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      {loading && <LoadingOverlay message="Sweeping playlists..." />}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <label htmlFor="playlist_b_id" className="text-sm font-medium">
+                Playlist B (Reference — select one or more):
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 bg-white/10 text-white/80 rounded-full text-xs font-medium">
+                  {playlistBList.length} selected
+                </span>
+                <button type="button" onClick={handleDeselectAll} className="btn btn-secondary text-xs py-1 px-2">
+                  Deselect All
+                </button>
+              </div>
+            </div>
+            <select
+              name="playlist_b_id"
+              id="playlist_b_id"
+              multiple
+              size={10}
+              className="w-full"
+              value={playlistBList}
+              onChange={(e) => {
+                const selected = Array.from(e.target.selectedOptions, option => option.value)
+                setPlaylistBList(selected)
+              }}
+              disabled={playlistsLoading}
+              required
+            >
+              {playlists.map(playlist => (
+                <option key={playlist.id} value={playlist.id}>
+                  {playlist.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-text-muted mt-1">Hold Ctrl/Cmd to select multiple playlists</p>
+          </div>
+
+          <button type="submit" className="btn btn-accent">
+            Run Filter Sweep
+          </button>
+        </form>
+
+        {loading && <LoadingOverlay message="Sweeping playlists..." />}
+      </section>
     </div>
   )
 }

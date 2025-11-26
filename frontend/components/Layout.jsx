@@ -9,7 +9,7 @@ function Layout({ children, user }) {
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: 'home-icon-w.png' },
-    { path: '/view-tracks', label: 'View Tracks', icon: 'playlist-view-w.png' },
+    { path: '/view-playlists', label: 'View Playlists', icon: 'playlist-view-w.png' },
     { path: '/remove-duplicates', label: 'Remove Duplicates', icon: 'remove-dupes-w.png' },
     { path: '/cratedigger', label: 'CrateDigger', icon: 'playlist-view-w.png' },
     { path: '/filter-sweep', label: 'Filter Sweep', icon: 'sweep-icon-w.png' },

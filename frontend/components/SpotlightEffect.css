@@ -2,7 +2,7 @@
   position: relative;
   border-radius: 1.5rem;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.479), rgba(15, 23, 42, 0.171));
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.479), rgba(61, 41, 109, 0.171));
   backdrop-filter: blur(20px);
   padding: 3rem;
   overflow: hidden;

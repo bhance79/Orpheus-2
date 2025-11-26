@@ -533,17 +533,19 @@ def api_playlist(playlist_id):
                 tr = (it or {}).get("track") or {}
                 if not tr:
                     continue
+                album = tr.get("album") or {}
+                images = album.get("images") or []
                 rows.append({
+                    "id": tr.get("id"),
                     "name": tr.get("name"),
                     "artists": ", ".join(a.get("name", "") for a in (tr.get("artists") or [])),
-                    "album": (tr.get("album") or {}).get("name"),
+                    "album": album.get("name"),
                     "added_at": it.get("played_at"),
                     "url": (tr.get("external_urls") or {}).get("spotify"),
                     "explicit": tr.get("explicit"),
                     "duration_ms": tr.get("duration_ms"),
+                    "cover": images[0].get("url") if images else None,
                 })
-
-            rows.sort(key=lambda t: (t.get("name") or "").lower())
 
             return jsonify({
                 "ok": True,
@@ -569,17 +571,19 @@ def api_playlist(playlist_id):
             tr = (it or {}).get("track") or {}
             if not tr:
                 continue
+            album = tr.get("album") or {}
+            images = album.get("images") or []
             rows.append({
+                "id": tr.get("id"),
                 "name": tr.get("name"),
                 "artists": ", ".join(a.get("name", "") for a in (tr.get("artists") or [])),
-                "album": (tr.get("album") or {}).get("name"),
+                "album": album.get("name"),
                 "added_at": it.get("added_at"),
                 "url": (tr.get("external_urls") or {}).get("spotify"),
                 "explicit": tr.get("explicit"),
                 "duration_ms": tr.get("duration_ms"),
+                "cover": images[0].get("url") if images else None,
             })
-
-        rows.sort(key=lambda t: (t.get("name") or "").lower())
 
         return jsonify({
             "ok": True,
@@ -923,6 +927,22 @@ def api_artist_details(artist_id: str):
     except Exception:
         pass
 
+    # Get artist's albums (discography)
+    albums_list: List[Dict[str, Any]] = []
+    try:
+        albums = sp.artist_albums(artist_id, album_type='album', limit=50) or {}
+        for album in (albums.get("items") or []):
+            album_images = album.get("images") or []
+            albums_list.append({
+                "id": album.get("id"),
+                "name": album.get("name"),
+                "cover": album_images[0].get("url") if album_images else None,
+                "release_date": album.get("release_date"),
+                "url": (album.get("external_urls") or {}).get("spotify"),
+            })
+    except Exception:
+        pass
+
     payload = {
         "id": artist.get("id") or artist_id,
         "name": artist.get("name"),
@@ -932,6 +952,7 @@ def api_artist_details(artist_id: str):
         "popularity": artist.get("popularity"),
         "spotify_url": (artist.get("external_urls") or {}).get("spotify"),
         "top_tracks": top_tracks_list,
+        "albums": albums_list,
     }
 
     return jsonify({"ok": True, "artist": payload})

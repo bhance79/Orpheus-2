@@ -1,13 +1,23 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { usePlaylists } from '../hooks/usePlaylists'
-import LoadingOverlay from '../components/LoadingOverlay'
+import PlaylistTracksModal from '../components/PlaylistTracksModal'
 
-function ViewTracks() {
+function ViewPlaylists() {
   const { ownedPlaylists, loading: playlistsLoading } = usePlaylists()
-  const [selectedPlaylistId, setSelectedPlaylistId] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activePlaylist, setActivePlaylist] = useState(null)
   const [playlistData, setPlaylistData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+
+  // Filter playlists based on search query
+  const filteredPlaylists = useMemo(() => {
+    if (!searchQuery.trim()) return ownedPlaylists
+    const query = searchQuery.toLowerCase()
+    return ownedPlaylists.filter(playlist =>
+      playlist.name.toLowerCase().includes(query)
+    )
+  }, [ownedPlaylists, searchQuery])
 
   const msToMinSec = (ms) => {
     if (ms == null) return ''
@@ -17,20 +27,16 @@ function ViewTracks() {
     return `${m}:${s}`
   }
 
-  const handleLoadTracks = async (e) => {
-    e.preventDefault()
+  const handlePlaylistClick = async (playlist) => {
+    if (!playlist) return
 
-    if (!selectedPlaylistId) {
-      setError('Please select a playlist')
-      return
-    }
-
+    setActivePlaylist(playlist)
     setLoading(true)
     setError(null)
     setPlaylistData(null)
 
     try {
-      const res = await fetch(`/api/playlist/${encodeURIComponent(selectedPlaylistId)}`)
+      const res = await fetch(`/api/playlist/${encodeURIComponent(playlist.id)}`)
       const data = await res.json()
 
       if (!data.ok) {
@@ -46,115 +52,159 @@ function ViewTracks() {
     }
   }
 
+  const handleModalClose = () => {
+    setActivePlaylist(null)
+    setPlaylistData(null)
+    setError(null)
+    setLoading(false)
+  }
+
+  const modalPlaylistDetails = playlistData?.playlist ?? (activePlaylist
+    ? {
+        id: activePlaylist.id,
+        name: activePlaylist.name,
+        owner: activePlaylist.owner?.display_name || activePlaylist.owner?.id || 'Unknown',
+        total: activePlaylist.tracks?.total ?? activePlaylist.trackCount ?? 0,
+        image: activePlaylist.images?.[0]?.url,
+        url: activePlaylist.external_urls?.spotify
+      }
+    : null
+  )
+
   return (
-    <div className="container">
-      <h2 className="text-xl font-bold mb-4">View Playlist Tracks</h2>
+    <div className="dashboard-grid">
+      <section className="dashboard-card dashboard-card--view-playlists">
+        <h2 className="text-xl font-bold mb-4">View Playlists</h2>
 
-      {/* Playlist Selection Form */}
-      <form onSubmit={handleLoadTracks} className="mb-6">
-        <label htmlFor="playlist_id" className="block mb-2 text-sm font-medium">
-          Select a playlist:
-        </label>
-        <div className="flex gap-3">
-          <select
-            name="playlist_id"
-            id="playlist_id"
-            value={selectedPlaylistId}
-            onChange={(e) => setSelectedPlaylistId(e.target.value)}
-            className="flex-1"
+        {/* Search Bar with Glassmorphism */}
+        <div className="mb-6">
+          <label htmlFor="search" className="block mb-2 text-sm font-medium">
+            Search playlists:
+          </label>
+          <input
+            type="text"
+            id="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Type to filter playlists..."
+            className="w-full px-4 py-2 rounded-lg"
+            style={{
+              color: '#ffffff',
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+            }}
             disabled={playlistsLoading}
-            required
-          >
-            <option value="">-- Choose a playlist --</option>
-            <option value="__recent__">Recently Played</option>
-            {ownedPlaylists.map(playlist => (
-              <option key={playlist.id} value={playlist.id}>
-                {playlist.name}
-              </option>
-            ))}
-          </select>
-          <button type="submit" className="btn">
-            Load Tracks
-          </button>
+          />
         </div>
-      </form>
 
-      {error && (
-        <div className="flash mb-6">
-          <div className="flash-item">{error}</div>
-        </div>
-      )}
-
-      {/* Track Results */}
-      {playlistData && (
-        <div className="card">
-          <div className="flex items-start justify-between mb-6 gap-4">
-            <div className="flex items-center gap-4">
-              {playlistData.playlist.image && (
-                <img
-                  src={playlistData.playlist.image}
-                  alt={`${playlistData.playlist.name} cover`}
-                  className="w-32 h-32 rounded-lg object-cover shadow-lg"
-                />
-              )}
-              <div>
-                <h3 className="text-2xl font-bold">{playlistData.playlist.name}</h3>
-                <p className="text-text-secondary">by {playlistData.playlist.owner}</p>
-                <p className="text-sm text-text-muted mt-1">
-                  {playlistData.playlist.total} tracks
-                </p>
-              </div>
+        <div className="playlist-grid-scroll">
+          {/* Playlist Grid */}
+          {playlistsLoading ? (
+            <p className="text-text-secondary">Loading playlists...</p>
+          ) : filteredPlaylists.length === 0 ? (
+            <p className="text-text-secondary">
+              {searchQuery ? `No playlists found matching "${searchQuery}"` : 'No playlists available'}
+            </p>
+          ) : (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-4">
+              {filteredPlaylists.map(playlist => (
+                <button
+                  key={playlist.id}
+                  onClick={() => handlePlaylistClick(playlist)}
+                  className="playlist-card group"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: '16px',
+                    padding: '16px',
+                    transition: 'transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease',
+                    cursor: 'pointer',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    textAlign: 'left'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-4px)'
+                    e.currentTarget.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.4)'
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = 'none'
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '100%',
+                      aspectRatio: '1',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      marginBottom: '12px',
+                      background: '#2a2a2a'
+                    }}
+                  >
+                    {playlist.images?.[0]?.url ? (
+                      <img
+                        src={playlist.images[0].url}
+                        alt={playlist.name}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '10px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.2em',
+                          color: 'rgba(255, 255, 255, 0.4)'
+                        }}
+                      >
+                        playlist cover
+                      </div>
+                    )}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#ffffff',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical'
+                    }}
+                  >
+                    {playlist.name}
+                  </div>
+                </button>
+              ))}
             </div>
-            {playlistData.playlist.url && (
-              <a
-                href={playlistData.playlist.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-secondary"
-              >
-                Open in Spotify
-              </a>
-            )}
-          </div>
-
-          <div className="table-wrap">
-            <table className="tracks">
-              <thead>
-                <tr>
-                  <th>Track</th>
-                  <th>Artist(s)</th>
-                  <th>Album</th>
-                  <th>Added</th>
-                  <th>⏱</th>
-                </tr>
-              </thead>
-              <tbody>
-                {playlistData.tracks.map((track, index) => (
-                  <tr key={index}>
-                    <td>
-                      {track.url ? (
-                        <a href={track.url} target="_blank" rel="noopener noreferrer" className="hover:text-white/70">
-                          {track.name}
-                        </a>
-                      ) : (
-                        track.name
-                      )}
-                    </td>
-                    <td>{track.artists || ''}</td>
-                    <td>{track.album || ''}</td>
-                    <td>{track.added_at ? new Date(track.added_at).toLocaleDateString() : ''}</td>
-                    <td>{msToMinSec(track.duration_ms)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          )}
         </div>
-      )}
+      </section>
 
-      {loading && <LoadingOverlay message="Loading tracks..." />}
+      <PlaylistTracksModal
+        isOpen={Boolean(activePlaylist)}
+        playlist={modalPlaylistDetails}
+        tracks={playlistData?.tracks ?? []}
+        loading={loading}
+        error={error}
+        onClose={handleModalClose}
+        formatDuration={msToMinSec}
+      />
     </div>
   )
 }
 
-export default ViewTracks
+export default ViewPlaylists

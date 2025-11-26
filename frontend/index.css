@@ -16,6 +16,34 @@
     @apply bg-bg-dark text-text-primary;
     font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   }
+
+  /* Global scrollbar styling with rounded edges */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(75, 85, 99, 0.8) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: rgba(75, 85, 99, 0.8);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: rgba(107, 114, 128, 0.9);
+    border-radius: 9999px;
+    background-clip: padding-box;
+  }
 }
 
 /* Import existing styles from styles.css - we'll migrate these gradually */
@@ -157,6 +185,25 @@
   .dashboard-card {
     @apply rounded-3xl px-5 py-4 border border-white/10 shadow-xl overflow-hidden flex flex-col gap-4;
     min-height: 0;
+  }
+
+  .dashboard-card--view-playlists {
+    @apply gap-6;
+  }
+
+  .playlist-grid-scroll {
+    flex: 1;
+    min-height: 0;
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
+    padding-right: 0.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .playlist-grid-scroll {
+      max-height: none;
+      padding-right: 0;
+    }
   }
 
   .dashboard-card--welcome {
@@ -364,6 +411,11 @@
     @apply rounded-xl shadow-2xl max-w-2xl w-full max-h-[98vh] overflow-hidden border border-white/10;
   }
 
+  .modal-panel--wide {
+    max-width: 1100px;
+    width: 100%;
+  }
+
   .modal-header {
     @apply flex items-center justify-between p-6 border-b border-border;
   }
@@ -379,6 +431,11 @@
 
   .modal-content {
     @apply overflow-y-auto max-h-[calc(98vh-180px)];
+  }
+
+  .modal-content--tracks {
+    max-height: calc(90vh - 220px);
+    padding-bottom: 0;
   }
 
   .modal-list {
@@ -919,6 +976,11 @@
   /* Track table */
   .table-wrap {
     @apply overflow-x-auto;
+  }
+
+  .tracks-modal-table {
+    max-height: 60vh;
+    overflow-y: auto;
   }
 
   table.tracks {

@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import SpotlightEffect from './SpotlightEffect'
+import AlbumPreviewOverlay from './AlbumPreviewOverlay'
 
 function ArtistPreviewOverlay({ artist, onClose }) {
   const [artistDetails, setArtistDetails] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [selectedAlbum, setSelectedAlbum] = useState(null)
+  const albumsGridRef = useRef(null)
 
   const portalTarget = typeof document !== 'undefined' ? document.body : null
 
@@ -63,6 +66,47 @@ function ArtistPreviewOverlay({ artist, onClose }) {
     }
   }, [artist])
 
+  useEffect(() => {
+    const albumsGrid = albumsGridRef.current
+    if (!albumsGrid) return
+
+    let scrollTimeout
+    const handleWheel = (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault()
+
+        // Clear any existing scroll timeout
+        if (scrollTimeout) {
+          clearTimeout(scrollTimeout)
+        }
+
+        // Calculate new scroll position
+        const scrollAmount = e.deltaY * 3.5
+        const newScrollLeft = albumsGrid.scrollLeft + scrollAmount
+
+        // Use scrollTo for smooth scrolling
+        albumsGrid.scrollTo({
+          left: newScrollLeft,
+          behavior: 'smooth'
+        })
+
+        // Debounce to allow smooth scrolling to complete
+        scrollTimeout = setTimeout(() => {
+          scrollTimeout = null
+        }, 100)
+      }
+    }
+
+    albumsGrid.addEventListener('wheel', handleWheel, { passive: false })
+
+    return () => {
+      albumsGrid.removeEventListener('wheel', handleWheel)
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout)
+      }
+    }
+  }, [artistDetails])
+
   if (!artist || !portalTarget) {
     return null
   }
@@ -73,11 +117,7 @@ function ArtistPreviewOverlay({ artist, onClose }) {
     }
   }
 
-  const topTracks = artistDetails?.top_tracks || []
-  const totalTracks = topTracks.length
-  const midpoint = Math.ceil(totalTracks / 2)
-  const column1 = topTracks.slice(0, midpoint)
-  const column2 = topTracks.slice(midpoint)
+  const albums = artistDetails?.albums || []
 
   const overlayStyle = {
     position: 'fixed',
@@ -167,36 +207,67 @@ function ArtistPreviewOverlay({ artist, onClose }) {
     gap: '1.5rem',
   }
 
-  const topTracksLabelStyle = {
+  const discographyLabelStyle = {
     color: '#d1d5db',
     margin: 0,
     marginBottom: '1.25rem',
     fontSize: '1.5rem',
   }
 
-  const columnsContainerStyle = {
+  const albumsGridStyle = {
     display: 'flex',
-    gap: '3rem',
+    gap: '1rem',
+    overflowX: 'auto',
+    overflowY: 'hidden',
+    paddingBottom: '0.5rem',
+    scrollbarWidth: 'thin',
+    scrollbarColor: '#4b5563 transparent',
+    maxWidth: 'calc(200px * 3 + 1rem * 2)',
+    scrollBehavior: 'smooth',
+    scrollSnapType: 'x mandatory',
   }
 
-  const columnStyle = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem',
+  const albumItemStyle = {
+    flexShrink: 0,
+    width: '200px',
+    cursor: 'pointer',
+    scrollSnapAlign: 'start',
   }
 
-  const trackRowStyle = {
+  const albumCoverStyle = {
+    width: '200px',
+    height: '200px',
+    borderRadius: '0.5rem',
+    overflow: 'hidden',
+    backgroundColor: '#9ca3af',
     display: 'flex',
-    gap: '0.75rem',
-    color: '#9ca3af',
-    fontSize: '1.25rem',
     alignItems: 'center',
+    justifyContent: 'center',
+    color: '#4b5563',
+    fontSize: '0.875rem',
+    transition: 'transform 0.2s',
+    marginBottom: '0.5rem',
   }
 
-  const trackLinkStyle = {
+  const albumImageStyle = {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  }
+
+  const albumNameStyle = {
+    color: '#d1d5db',
+    fontSize: '0.875rem',
+    fontWeight: '500',
+    marginBottom: '0.25rem',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  }
+
+  const albumYearStyle = {
     color: '#9ca3af',
-    textDecoration: 'none',
-    transition: 'color 0.2s',
+    fontSize: '0.75rem',
   }
 
   if (loading) {
@@ -219,92 +290,74 @@ function ArtistPreviewOverlay({ artist, onClose }) {
     )
   }
 
-  return createPortal(
-    <div style={overlayStyle} onClick={handleBackdropClick}>
-      <SpotlightEffect spotlightColor="rgba(0, 82, 255, 0.25)">
-        <div style={cardContentStyle}>
-          <button
-            type="button"
-            style={closeButtonStyle}
-            onClick={onClose}
-            aria-label="Close artist preview"
-          >
-            ×
-          </button>
+  return (
+    <>
+      {createPortal(
+        <div style={overlayStyle} onClick={handleBackdropClick}>
+          <SpotlightEffect spotlightColor="rgba(0, 82, 255, 0.25)">
+            <div style={cardContentStyle}>
+              <button
+                type="button"
+                style={closeButtonStyle}
+                onClick={onClose}
+                aria-label="Close artist preview"
+              >
+                ×
+              </button>
 
-          <div style={imageContainerStyle}>
-            <div style={imageStyle}>
-              {artistImage ? (
-                <img src={artistImage} alt={`${artistName} profile`} style={artistImageStyle} />
-              ) : (
-                'artist image'
-              )}
-            </div>
-          </div>
-
-          <div style={infoStyle}>
-            <h2 style={nameStyle}>{artistName}</h2>
-            {genres.length > 0 && (
-              <p style={genresStyle}>{genres.slice(0, 3).join(', ')}</p>
-            )}
-            <div style={statsStyle}>
-              {followers && (
-                <span>{followers.toLocaleString()} followers</span>
-              )}
-              {popularity !== undefined && (
-                <span>Popularity: {popularity}/100</span>
-              )}
-            </div>
-
-            <p style={topTracksLabelStyle}>Top Tracks</p>
-
-            {error ? (
-              <div style={{ color: '#9ca3af', fontSize: '0.875rem' }}>{error}</div>
-            ) : totalTracks === 0 ? (
-              <div style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Top tracks unavailable.</div>
-            ) : (
-              <div style={columnsContainerStyle}>
-                <div style={columnStyle}>
-                  {column1.map((track, index) => (
-                    <div key={track.id || `${index}-${track.name}`} style={trackRowStyle}>
-                      <span>{index + 1}.</span>
-                      {track.url ? (
-                        <a
-                          href={track.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={trackLinkStyle}
-                          onMouseEnter={(e) => e.target.style.color = '#fff'}
-                          onMouseLeave={(e) => e.target.style.color = '#9ca3af'}
-                        >
-                          {track.name}
-                        </a>
-                      ) : (
-                        <span>{track.name}</span>
-                      )}
-                    </div>
-                  ))}
+              <div style={imageContainerStyle}>
+                <div style={imageStyle}>
+                  {artistImage ? (
+                    <img src={artistImage} alt={`${artistName} profile`} style={artistImageStyle} />
+                  ) : (
+                    'artist image'
+                  )}
                 </div>
-                {column2.length > 0 && (
-                  <div style={columnStyle}>
-                    {column2.map((track, index) => {
-                      const trackNumber = midpoint + index + 1
+              </div>
+
+              <div style={infoStyle}>
+                <h2 style={nameStyle}>{artistName}</h2>
+                {genres.length > 0 && (
+                  <p style={genresStyle}>{genres.slice(0, 3).join(', ')}</p>
+                )}
+                <div style={statsStyle}>
+                  {followers && (
+                    <span>{followers.toLocaleString()} monthly listeners</span>
+                  )}
+                </div>
+
+                <p style={discographyLabelStyle}>Discography</p>
+
+                {error ? (
+                  <div style={{ color: '#9ca3af', fontSize: '0.875rem' }}>{error}</div>
+                ) : albums.length === 0 ? (
+                  <div style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Discography unavailable.</div>
+                ) : (
+                  <div ref={albumsGridRef} style={albumsGridStyle}>
+                    {albums.map((album) => {
+                      const releaseYear = album.release_date ? album.release_date.substring(0, 4) : ''
                       return (
-                        <div key={track.id || `${trackNumber}-${track.name}`} style={trackRowStyle}>
-                          <span>{trackNumber}.</span>
-                          {track.url ? (
-                            <a
-                              href={track.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={trackLinkStyle}
-                              onMouseEnter={(e) => e.target.style.color = '#fff'}
-                              onMouseLeave={(e) => e.target.style.color = '#9ca3af'}
-                            >
-                              {track.name}
-                            </a>
-                          ) : (
-                            <span>{track.name}</span>
+                        <div
+                          key={album.id || album.name}
+                          style={albumItemStyle}
+                          onClick={() => setSelectedAlbum(album)}
+                        >
+                          <div
+                            style={albumCoverStyle}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                          >
+                            {album.cover ? (
+                              <img src={album.cover} alt={album.name} style={albumImageStyle} />
+                            ) : (
+                              'album cover'
+                            )}
+                          </div>
+                          <div style={albumNameStyle} title={album.name}>
+                            {album.name}
+                          </div>
+                          {releaseYear && (
+                            <div style={albumYearStyle}>{releaseYear}</div>
                           )}
                         </div>
                       )
@@ -312,12 +365,24 @@ function ArtistPreviewOverlay({ artist, onClose }) {
                   </div>
                 )}
               </div>
-            )}
-          </div>
-        </div>
-      </SpotlightEffect>
-    </div>,
-    portalTarget
+            </div>
+          </SpotlightEffect>
+        </div>,
+        portalTarget
+      )}
+
+      {selectedAlbum && (
+        <AlbumPreviewOverlay
+          track={{
+            album_id: selectedAlbum.id,
+            album: selectedAlbum.name,
+            cover: selectedAlbum.cover,
+            url: selectedAlbum.url,
+          }}
+          onClose={() => setSelectedAlbum(null)}
+        />
+      )}
+    </>
   )
 }
 

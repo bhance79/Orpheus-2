@@ -191,6 +191,10 @@
     @apply gap-6;
   }
 
+  .dashboard-card--filter-sweep {
+    @apply overflow-visible pb-6;
+  }
+
   .playlist-grid-scroll {
     flex: 1;
     min-height: 0;

@@ -27,6 +27,7 @@ function PlaylistTracksModal({ isOpen, playlist, tracks, loading, error, onClose
   const [duplicateError, setDuplicateError] = useState(null)
   const [duplicateResult, setDuplicateResult] = useState(null)
   const [duplicateMessage, setDuplicateMessage] = useState(null)
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false)
 
   useEffect(() => {
     if (!isOpen) {
@@ -37,6 +38,7 @@ function PlaylistTracksModal({ isOpen, playlist, tracks, loading, error, onClose
       setDuplicateMessage(null)
       setDuplicateCheckLoading(false)
       setDuplicateRemoveLoading(false)
+      setShowDuplicateModal(false)
     }
   }, [isOpen])
 
@@ -129,6 +131,7 @@ function PlaylistTracksModal({ isOpen, playlist, tracks, loading, error, onClose
     setDuplicateCheckLoading(true)
     setDuplicateMessage(null)
     setDuplicateResult(null)
+    setShowDuplicateModal(true)
 
     try {
       const res = await fetch(`/api/check-duplicates/${encodeURIComponent(playlist.id)}`)
@@ -153,6 +156,139 @@ function PlaylistTracksModal({ isOpen, playlist, tracks, loading, error, onClose
   }
 
   const duplicateBusy = duplicateCheckLoading || duplicateRemoveLoading
+  const handleCloseDuplicateModal = () => {
+    if (duplicateBusy) return
+    setShowDuplicateModal(false)
+    setDuplicateResult(null)
+    setDuplicateError(null)
+    setDuplicateMessage(null)
+  }
+
+  const renderDuplicateModalBody = () => {
+    if (duplicateCheckLoading) {
+      return (
+        <div className="flex flex-col items-center gap-3 py-8 text-center">
+          <div className="h-10 w-10 rounded-full border-2 border-white/20 border-t-accent animate-spin" />
+          <p className="text-sm text-text-secondary">Checking playlist for duplicates...</p>
+        </div>
+      )
+    }
+
+    if (duplicateRemoveLoading) {
+      return (
+        <div className="flex flex-col items-center gap-3 py-8 text-center">
+          <div className="h-10 w-10 rounded-full border-2 border-white/20 border-t-accent animate-spin" />
+          <p className="text-sm text-text-secondary">Removing duplicate tracks...</p>
+        </div>
+      )
+    }
+
+    if (duplicateError) {
+      return (
+        <div className="space-y-4">
+          <div className="px-4 py-3 rounded-xl bg-red-900/30 border border-red-600 text-red-100 text-sm">
+            {duplicateError}
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                setDuplicateError(null)
+                handleCheckDuplicates()
+              }}
+            >
+              Try again
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={handleCloseDuplicateModal}>
+              Close
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    if (duplicateMessage) {
+      return (
+        <div className="space-y-4">
+          <div className="px-4 py-3 rounded-xl bg-green-900/20 border border-green-700 text-green-200 text-sm">
+            {duplicateMessage}
+          </div>
+          <div className="flex justify-end">
+            <button type="button" className="btn btn-secondary" onClick={handleCloseDuplicateModal}>
+              Close
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    if (duplicateResult) {
+      if (!duplicateResult.has_duplicates) {
+        return (
+          <div className="space-y-4">
+            <div className="px-4 py-3 rounded-xl bg-green-900/20 border border-green-700 text-green-200 text-sm">
+              This playlist is already clean - no duplicates were found.
+            </div>
+            <div className="flex justify-end">
+              <button type="button" className="btn btn-secondary" onClick={handleCloseDuplicateModal}>
+                Close
+              </button>
+            </div>
+          </div>
+        )
+      }
+
+      return (
+        <div className="space-y-4">
+          <div>
+            <p className="text-lg font-semibold text-yellow-300">Duplicates found</p>
+            <p className="text-sm text-text-secondary">
+              {duplicateResult.duplicate_count} duplicate track{duplicateResult.duplicate_count === 1 ? '' : 's'} detected. Remove them now?
+            </p>
+          </div>
+          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+            {(duplicateResult.duplicates || []).map((dup, idx) => (
+              <div
+                key={`${dup.track_name || 'dup'}-${idx}`}
+                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2"
+              >
+                <div className="font-medium">{dup.track_name || 'Unknown track'}</div>
+                <div className="text-xs text-text-secondary">{dup.artists || 'Unknown artist'}</div>
+                <div className="text-xs text-yellow-300 mt-1">
+                  Found {dup.total_occurrences} times - {dup.duplicates_to_remove} to remove
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-wrap justify-end gap-3">
+            <button
+              type="button"
+              className="btn btn-accent"
+              onClick={handleRemoveDuplicates}
+              disabled={duplicateBusy}
+            >
+              {duplicateRemoveLoading ? 'Removing...' : 'Remove duplicates'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleCloseDuplicateModal}
+              disabled={duplicateBusy}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="py-4 text-sm text-text-secondary">
+        Start by checking for duplicates to see if this playlist needs cleanup.
+      </div>
+    )
+  }
 
   const totalTracks = playlist?.total ?? tracks?.length ?? 0
 
@@ -185,7 +321,7 @@ function PlaylistTracksModal({ isOpen, playlist, tracks, loading, error, onClose
             </div>
           </div>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Close playlist tracks">
-            ×
+            &times;
           </button>
         </div>
 
@@ -236,100 +372,6 @@ function PlaylistTracksModal({ isOpen, playlist, tracks, loading, error, onClose
             </div>
           )}
         </div>
-
-        {duplicateError && (
-          <div className="px-6 pb-4">
-            <div className="px-4 py-2 rounded-lg bg-red-900/20 border border-red-700 text-red-200 text-sm">
-              {duplicateError}
-            </div>
-          </div>
-        )}
-
-        {duplicateMessage && (
-          <div className="px-6 pb-4">
-            <div className="px-4 py-2 rounded-lg bg-green-900/20 border border-green-700 text-green-200 text-sm">
-              {duplicateMessage}
-            </div>
-          </div>
-        )}
-
-        {duplicateResult && (
-          <div className="px-6 pb-4">
-            <div
-              className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md shadow-lg p-4 text-sm text-white/90"
-              style={{ boxShadow: '0 10px 40px rgba(0,0,0,0.35)' }}
-            >
-              {!duplicateResult.has_duplicates ? (
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="font-semibold text-green-300">No duplicates found</p>
-                    <p className="text-text-secondary">This playlist is already clean.</p>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setDuplicateResult(null)}
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="font-semibold text-yellow-300">Duplicates found</p>
-                      <p className="text-text-secondary">
-                        {duplicateResult.duplicate_count} duplicate track{duplicateResult.duplicate_count === 1 ? '' : 's'} detected in this playlist.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => setDuplicateResult(null)}
-                      disabled={duplicateBusy}
-                    >
-                      Dismiss
-                    </button>
-                  </div>
-
-                  <div className="space-y-2 max-h-56 overflow-auto pr-1">
-                    {(duplicateResult.duplicates || []).map((dup, idx) => (
-                      <div
-                        key={`${dup.track_name || 'dup'}-${idx}`}
-                        className="rounded-xl border border-white/10 bg-white/5 px-3 py-2"
-                      >
-                        <div className="font-medium">{dup.track_name || 'Unknown track'}</div>
-                        <div className="text-xs text-text-secondary">{dup.artists || 'Unknown artist'}</div>
-                        <div className="text-xs text-yellow-300 mt-1">
-                          Found {dup.total_occurrences} times • {dup.duplicates_to_remove} to remove
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      className="btn btn-accent"
-                      onClick={handleRemoveDuplicates}
-                      disabled={duplicateBusy}
-                    >
-                      {duplicateRemoveLoading ? 'Removing...' : 'Remove duplicates'}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => setDuplicateResult(null)}
-                      disabled={duplicateBusy}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
         <div className="modal-content modal-content--tracks">
           {loading ? (
@@ -390,6 +432,43 @@ function PlaylistTracksModal({ isOpen, playlist, tracks, loading, error, onClose
         </div>
       </div>
     </div>
+
+      {/* Duplicate Check Modal */}
+      {showDuplicateModal && (
+        <div
+          className="fixed inset-0 z-[95] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              handleCloseDuplicateModal()
+            }
+          }}
+        >
+          <div
+            className="rounded-2xl p-6 max-w-xl w-full mx-4 border border-white/10 bg-surface-elevated backdrop-blur-2xl shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="feature-label m-0 text-xs tracking-[0.35em] text-white/50">Duplicate sweep</p>
+                <h3 className="text-2xl font-bold text-white mt-1">Duplicate Check</h3>
+                <p className="text-sm text-text-secondary">
+                  We&apos;ll scan this playlist for repeated tracks and help you remove them.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="text-2xl leading-none text-white/60 hover:text-white transition-colors disabled:opacity-40"
+                onClick={handleCloseDuplicateModal}
+                disabled={duplicateBusy}
+                aria-label="Close duplicate check"
+              >
+                &times;
+              </button>
+            </div>
+            {renderDuplicateModalBody()}
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal - rendered as sibling to avoid z-index stacking issues */}
       {showDeleteConfirm && (

@@ -675,6 +675,8 @@ def filter_sweep():
         flash(f"Filter Sweep failed: {e}")
         return redirect(url_for("index"))
 
+
+
 @app.route("/api/playlists")
 def api_playlists():
     """
@@ -685,6 +687,50 @@ def api_playlists():
         return jsonify({"ok": False, "error": "not_authenticated"}), 401
     try:
         sp = get_sp()
+        limit = request.args.get("limit", type=int)
+        offset = request.args.get("offset", default=0, type=int)
+        owned_only = (request.args.get("owned_only") or "").strip().lower() in {"1", "true", "yes", "on"}
+
+        # Paginated mode: fetch a single Spotify page for faster initial loads.
+        if limit is not None:
+            per_page = max(1, min(limit, 50))
+            offset = max(offset, 0)
+            page = sp.current_user_playlists(limit=per_page, offset=offset) or {}
+            items = page.get("items", []) or []
+            has_more = bool(page.get("next"))
+            next_offset = offset + per_page if has_more else None
+            user_profile = sp.me() or {}
+            me_id = normalize(user_profile.get("id"))
+
+            def is_owned(pl: Dict[str, Any]) -> bool:
+                return normalize(safe_get(safe_get(pl, "owner", {}), "id")) == me_id
+
+            owned_items = [pl for pl in items if is_owned(pl)]
+            payload_playlists = owned_items if owned_only else list(items)
+
+            # Inject Recently Played into the first general page for continuity with the legacy behavior.
+            if not owned_only and offset == 0:
+                recent_entry = {
+                    "id": RECENT_ID,
+                    "name": "Recently Played",
+                    "owner": {
+                        "id": user_profile.get("id") or "me",
+                        "display_name": user_profile.get("display_name") or "You"
+                    },
+                }
+                payload_playlists.append(recent_entry)
+
+            return jsonify({
+                "ok": True,
+                "playlists": payload_playlists,
+                "owned_playlists": owned_items,
+                "has_more": has_more,
+                "next_offset": next_offset,
+                "total": page.get("total", len(payload_playlists)),
+                "limit": per_page,
+                "offset": offset,
+            })
+
         owned = list_owned_playlists(sp)
         all_pl = list_all_playlists(sp)
 
@@ -697,7 +743,7 @@ def api_playlists():
         }
         all_pl.append(recent_entry)
 
-        # A–Z sort
+        # A?Z sort
         owned.sort(key=lambda p: (p.get("name") or "").lower())
         all_pl.sort(key=lambda p: (p.get("name") or "").lower())
 
@@ -708,6 +754,7 @@ def api_playlists():
         })
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
+
 
 @app.route("/api/user-stats")
 def api_user_stats():
@@ -1026,6 +1073,153 @@ def api_album_details(album_id: str):
         "tracks": tracks,
     }
     return jsonify({"ok": True, "album": payload})
+
+
+@app.route("/api/recommendations", methods=["POST"])
+def api_recommendations():
+    """
+    Get track recommendations based on seed tracks and/or artists.
+    Expects JSON body: { seed_tracks: [...track_ids], seed_artists: [...artist_ids], limit: 50 }
+    Returns: { ok, recommendations: [...tracks] }
+    """
+    if "token_info" not in session:
+        return jsonify({"ok": False, "error": "not_authenticated"}), 401
+
+    try:
+        sp = get_sp()
+    except RuntimeError as err:
+        return jsonify({"ok": False, "error": str(err)}), 401
+
+    data = request.get_json() or {}
+    seed_tracks = data.get("seed_tracks", [])
+    seed_artists = data.get("seed_artists", [])
+    limit = min(int(data.get("limit", 50)), 100)
+
+    # Validate seeds
+    if not seed_tracks and not seed_artists:
+        return jsonify({"ok": False, "error": "no_seeds_provided"}), 400
+
+    # Spotify API allows max 5 seeds total
+    total_seeds = len(seed_tracks) + len(seed_artists)
+    if total_seeds > 5:
+        return jsonify({"ok": False, "error": "too_many_seeds", "details": "Maximum 5 seeds allowed (tracks + artists combined)"}), 400
+    if total_seeds < 1:
+        return jsonify({"ok": False, "error": "insufficient_seeds", "details": "At least 1 seed required"}), 400
+
+    try:
+        # Get recommendations from Spotify
+        recommendations = sp.recommendations(
+            seed_tracks=seed_tracks[:5] if seed_tracks else None,
+            seed_artists=seed_artists[:5] if seed_artists else None,
+            limit=limit
+        )
+
+        tracks = []
+        for track in (recommendations.get("tracks") or []):
+            album = track.get("album") or {}
+            album_images = album.get("images") or []
+            artists = track.get("artists") or []
+            release_date = album.get("release_date") or ""
+            release_year = release_date[:4] if isinstance(release_date, str) else None
+
+            tracks.append({
+                "id": track.get("id"),
+                "uri": track.get("uri"),
+                "name": track.get("name"),
+                "artists": ", ".join(a.get("name", "") for a in artists),
+                "artist_ids": [a.get("id") for a in artists if a.get("id")],
+                "album": album.get("name"),
+                "album_id": album.get("id"),
+                "album_year": release_year,
+                "cover": album_images[0].get("url") if album_images else None,
+                "url": (track.get("external_urls") or {}).get("spotify"),
+                "duration_ms": track.get("duration_ms"),
+                "explicit": track.get("explicit"),
+                "popularity": track.get("popularity"),
+            })
+
+        return jsonify({
+            "ok": True,
+            "recommendations": tracks,
+            "seed_info": {
+                "tracks": len(seed_tracks),
+                "artists": len(seed_artists),
+                "total": total_seeds
+            }
+        })
+
+    except SpotifyException as e:
+        return jsonify({"ok": False, "error": f"spotify_error:{e}"}), 500
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/create-playlist", methods=["POST"])
+def api_create_playlist():
+    """
+    Create a new playlist with specified tracks.
+    Expects JSON body: { name: "playlist name", description: "...", track_uris: [...] }
+    Returns: { ok, playlist: {...} }
+    """
+    if "token_info" not in session:
+        return jsonify({"ok": False, "error": "not_authenticated"}), 401
+
+    try:
+        sp = get_sp()
+    except RuntimeError as err:
+        return jsonify({"ok": False, "error": str(err)}), 401
+
+    data = request.get_json() or {}
+    name = data.get("name", "").strip()
+    description = data.get("description", "").strip()
+    track_uris = data.get("track_uris", [])
+
+    if not name:
+        return jsonify({"ok": False, "error": "missing_name"}), 400
+    if not track_uris:
+        return jsonify({"ok": False, "error": "no_tracks_provided"}), 400
+
+    try:
+        # Get current user ID
+        user_id = current_user_id(sp)
+        if not user_id:
+            return jsonify({"ok": False, "error": "could_not_get_user_id"}), 400
+
+        # Create the playlist
+        playlist = sp.user_playlist_create(
+            user=user_id,
+            name=name,
+            public=False,
+            description=description
+        )
+
+        playlist_id = playlist.get("id")
+        if not playlist_id:
+            return jsonify({"ok": False, "error": "playlist_creation_failed"}), 500
+
+        # Add tracks in batches of 100
+        for batch in chunks(track_uris, 100):
+            sp.playlist_add_items(playlist_id, batch)
+
+        # Fetch the complete playlist details
+        final_playlist = sp.playlist(playlist_id)
+        images = final_playlist.get("images") or []
+
+        return jsonify({
+            "ok": True,
+            "playlist": {
+                "id": final_playlist.get("id"),
+                "name": final_playlist.get("name"),
+                "url": (final_playlist.get("external_urls") or {}).get("spotify"),
+                "image": images[0].get("url") if images else None,
+                "total_tracks": len(track_uris)
+            }
+        })
+
+    except SpotifyException as e:
+        return jsonify({"ok": False, "error": f"spotify_error:{e}"}), 500
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route("/logout")
 def logout():

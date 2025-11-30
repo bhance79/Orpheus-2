@@ -1,15 +1,23 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { usePlaylists } from '../hooks/usePlaylists'
 import PlaylistTracksModal from '../components/PlaylistTracksModal'
 
 function ViewPlaylists() {
-  const { ownedPlaylists, loading: playlistsLoading } = usePlaylists()
+  const {
+    ownedPlaylists,
+    loading: playlistsLoading,
+    loadingMore: playlistsLoadingMore,
+    hasMore: hasMorePlaylists,
+    loadMore: loadMorePlaylists,
+    error: playlistsError
+  } = usePlaylists({ paginated: true, ownedOnly: true, pageSize: 60 })
   const [searchQuery, setSearchQuery] = useState('')
   const [activePlaylist, setActivePlaylist] = useState(null)
   const [playlistData, setPlaylistData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [viewMode, setViewMode] = useState('grid') // 'grid' or 'list'
+  const scrollContainerRef = useRef(null)
 
   // Filter playlists based on search query
   const filteredPlaylists = useMemo(() => {
@@ -19,6 +27,30 @@ function ViewPlaylists() {
       playlist.name.toLowerCase().includes(query)
     )
   }, [ownedPlaylists, searchQuery])
+
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    const onScroll = () => {
+      if (!hasMorePlaylists || playlistsLoadingMore) return
+      const threshold = container.scrollHeight - container.clientHeight - 200
+      if (container.scrollTop >= threshold) {
+        loadMorePlaylists()
+      }
+    }
+
+    container.addEventListener('scroll', onScroll)
+    return () => container.removeEventListener('scroll', onScroll)
+  }, [hasMorePlaylists, playlistsLoadingMore, loadMorePlaylists])
+
+  useEffect(() => {
+    if (!hasMorePlaylists || playlistsLoading || playlistsLoadingMore) return
+    const container = scrollContainerRef.current
+    if (container && container.scrollHeight <= container.clientHeight + 50) {
+      loadMorePlaylists()
+    }
+  }, [hasMorePlaylists, playlistsLoading, playlistsLoadingMore, loadMorePlaylists, ownedPlaylists.length])
 
   const msToMinSec = (ms) => {
     if (ms == null) return ''
@@ -104,7 +136,10 @@ function ViewPlaylists() {
     <div className="dashboard-grid">
       <section className="dashboard-card dashboard-card--view-playlists">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Manage Playlists</h2>
+          <div>
+            <p className="feature-label m-0">Manage Playlists</p>
+            <h2 className="feature-title mt-1">Search playlists to view tracks, remove duplicates, or delete:</h2>
+          </div>
 
           {/* View Toggle */}
           <div className="flex gap-2">
@@ -139,9 +174,6 @@ function ViewPlaylists() {
 
         {/* Search Bar with Glassmorphism */}
         <div className="mb-6">
-          <label htmlFor="search" className="block mb-2 text-sm font-medium">
-            Search playlists to view tracks, remove duplicates, or delete:
-          </label>
           <input
             type="text"
             id="search"
@@ -160,178 +192,221 @@ function ViewPlaylists() {
           />
         </div>
 
-        <div className="playlist-grid-scroll">
+        {playlistsError && (
+          <div className="mb-4 text-sm text-red-300">
+            {playlistsError}
+          </div>
+        )}
+
+        <div className="playlist-grid-scroll" ref={scrollContainerRef}>
           {playlistsLoading ? (
             <p className="text-text-secondary">Loading playlists...</p>
           ) : filteredPlaylists.length === 0 ? (
-            <p className="text-text-secondary">
-              {searchQuery ? `No playlists found matching "${searchQuery}"` : 'No playlists available'}
-            </p>
-          ) : viewMode === 'grid' ? (
-            /* Grid View */
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-4">
-              {filteredPlaylists.map(playlist => (
-                <button
-                  key={playlist.id}
-                  onClick={() => handlePlaylistClick(playlist)}
-                  className="playlist-card group"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    backdropFilter: 'blur(10px)',
-                    borderRadius: '16px',
-                    padding: '16px',
-                    transition: 'transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease',
-                    cursor: 'pointer',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    textAlign: 'left'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-4px)'
-                    e.currentTarget.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.4)'
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)'
-                    e.currentTarget.style.boxShadow = 'none'
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
-                  }}
-                >
-                  <div
-                    style={{
-                      width: '100%',
-                      aspectRatio: '1',
-                      borderRadius: '12px',
-                      overflow: 'hidden',
-                      marginBottom: '12px',
-                      background: '#2a2a2a'
-                    }}
+            <>
+              <p className="text-text-secondary">
+                {hasMorePlaylists
+                  ? `No playlists found for "${searchQuery}" yet. Load more to search your remaining playlists.`
+                  : (searchQuery ? `No playlists found matching "${searchQuery}"` : 'No playlists available')}
+              </p>
+              {hasMorePlaylists && (
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={loadMorePlaylists}
+                    disabled={playlistsLoadingMore}
                   >
-                    {playlist.images?.[0]?.url ? (
-                      <img
-                        src={playlist.images[0].url}
-                        alt={playlist.name}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover'
-                        }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '10px',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.2em',
-                          color: 'rgba(255, 255, 255, 0.4)'
-                        }}
-                      >
-                        playlist cover
-                      </div>
-                    )}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      color: '#ffffff',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical'
-                    }}
-                  >
-                    {playlist.name}
-                  </div>
-                </button>
-              ))}
-            </div>
+                    {playlistsLoadingMore ? 'Loading more playlists...' : 'Load more playlists'}
+                  </button>
+                </div>
+              )}
+            </>
           ) : (
-            /* List View */
-            <div className="space-y-2">
-              {filteredPlaylists.map(playlist => (
-                <button
-                  key={playlist.id}
-                  onClick={() => handlePlaylistClick(playlist)}
-                  className="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-white/10 transition-all"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    textAlign: 'left'
-                  }}
-                >
-                  {/* Playlist Cover */}
-                  <div
-                    style={{
-                      width: '64px',
-                      height: '64px',
-                      borderRadius: '8px',
-                      overflow: 'hidden',
-                      flexShrink: 0,
-                      background: '#2a2a2a'
-                    }}
-                  >
-                    {playlist.images?.[0]?.url ? (
-                      <img
-                        src={playlist.images[0].url}
-                        alt={playlist.name}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover'
-                        }}
-                      />
-                    ) : (
+            <>
+              {viewMode === 'grid' ? (
+                /* Grid View */
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-4">
+                  {filteredPlaylists.map(playlist => (
+                    <button
+                      key={playlist.id}
+                      onClick={() => handlePlaylistClick(playlist)}
+                      className="playlist-card group"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        backdropFilter: 'blur(10px)',
+                        borderRadius: '16px',
+                        padding: '16px',
+                        transition: 'transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease',
+                        cursor: 'pointer',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        textAlign: 'left'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-4px)'
+                        e.currentTarget.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.4)'
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.boxShadow = 'none'
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                      }}
+                    >
                       <div
                         style={{
                           width: '100%',
-                          height: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '8px',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.2em',
-                          color: 'rgba(255, 255, 255, 0.4)'
+                          aspectRatio: '1',
+                          borderRadius: '12px',
+                          overflow: 'hidden',
+                          marginBottom: '12px',
+                          background: '#2a2a2a'
                         }}
                       >
-                        cover
+                        {playlist.images?.[0]?.url ? (
+                          <img
+                            src={playlist.images[0].url}
+                            alt={playlist.name}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover'
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '10px',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.2em',
+                              color: 'rgba(255, 255, 255, 0.4)'
+                            }}
+                          >
+                            playlist cover
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+                      <div
+                        style={{
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: '#ffffff',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical'
+                        }}
+                      >
+                        {playlist.name}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                /* List View */
+                <div className="space-y-2">
+                  {filteredPlaylists.map(playlist => (
+                    <button
+                      key={playlist.id}
+                      onClick={() => handlePlaylistClick(playlist)}
+                      className="w-full flex items-center gap-4 p-3 rounded-lg hover:bg-white/10 transition-all"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        textAlign: 'left'
+                      }}
+                    >
+                      {/* Playlist Cover */}
+                      <div
+                        style={{
+                          width: '64px',
+                          height: '64px',
+                          borderRadius: '8px',
+                          overflow: 'hidden',
+                          flexShrink: 0,
+                          background: '#2a2a2a'
+                        }}
+                      >
+                        {playlist.images?.[0]?.url ? (
+                          <img
+                            src={playlist.images[0].url}
+                            alt={playlist.name}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover'
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '8px',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.2em',
+                              color: 'rgba(255, 255, 255, 0.4)'
+                            }}
+                          >
+                            cover
+                          </div>
+                        )}
+                      </div>
 
-                  {/* Playlist Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-white truncate">
-                      {playlist.name}
-                    </div>
-                    <div className="text-sm text-text-secondary truncate">
-                      {playlist.owner?.display_name || 'Unknown'} • {playlist.tracks?.total || 0} tracks
-                    </div>
-                  </div>
+                      {/* Playlist Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-white truncate">
+                          {playlist.name}
+                        </div>
+                        <div className="text-sm text-text-secondary truncate">
+                          {(playlist.owner?.display_name || 'Unknown')} - {(playlist.tracks?.total || 0)} tracks
+                        </div>
+                      </div>
 
-                  {/* Arrow Icon */}
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 text-text-secondary"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
+                      {/* Arrow Icon */}
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5 text-text-secondary"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {hasMorePlaylists && (
+                <div className="flex justify-center mt-4">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={loadMorePlaylists}
+                    disabled={playlistsLoadingMore}
                   >
-                    <path
-                      fillRule="evenodd"
-                      d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </button>
-              ))}
-            </div>
+                    {playlistsLoadingMore ? 'Loading more playlists...' : 'Load more playlists'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+          {playlistsLoadingMore && !playlistsLoading && (
+            <p className="mt-4 text-center text-sm text-text-secondary">Loading more playlists...</p>
           )}
         </div>
       </section>

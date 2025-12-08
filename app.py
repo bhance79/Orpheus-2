@@ -1078,8 +1078,8 @@ def api_album_details(album_id: str):
 @app.route("/api/recommendations", methods=["POST"])
 def api_recommendations():
     """
-    Get track recommendations based on seed tracks and/or artists.
-    Expects JSON body: { seed_tracks: [...track_ids], seed_artists: [...artist_ids], limit: 50 }
+    Get track recommendations based on seed tracks, artists, and/or genres.
+    Expects JSON body: { seed_tracks: [...track_ids], seed_artists: [...artist_ids], seed_genres: [...genre_strings], limit: 100 }
     Returns: { ok, recommendations: [...tracks] }
     """
     if "token_info" not in session:
@@ -1093,16 +1093,17 @@ def api_recommendations():
     data = request.get_json() or {}
     seed_tracks = data.get("seed_tracks", [])
     seed_artists = data.get("seed_artists", [])
-    limit = min(int(data.get("limit", 50)), 100)
+    seed_genres = data.get("seed_genres", [])
+    limit = 100  # Spotify recommendations endpoint caps at 100
 
     # Validate seeds
-    if not seed_tracks and not seed_artists:
+    if not seed_tracks and not seed_artists and not seed_genres:
         return jsonify({"ok": False, "error": "no_seeds_provided"}), 400
 
     # Spotify API allows max 5 seeds total
-    total_seeds = len(seed_tracks) + len(seed_artists)
+    total_seeds = len(seed_tracks) + len(seed_artists) + len(seed_genres)
     if total_seeds > 5:
-        return jsonify({"ok": False, "error": "too_many_seeds", "details": "Maximum 5 seeds allowed (tracks + artists combined)"}), 400
+        return jsonify({"ok": False, "error": "too_many_seeds", "details": "Maximum 5 seeds allowed (tracks + artists + genres combined)"}), 400
     if total_seeds < 1:
         return jsonify({"ok": False, "error": "insufficient_seeds", "details": "At least 1 seed required"}), 400
 
@@ -1111,6 +1112,7 @@ def api_recommendations():
         recommendations = sp.recommendations(
             seed_tracks=seed_tracks[:5] if seed_tracks else None,
             seed_artists=seed_artists[:5] if seed_artists else None,
+            seed_genres=seed_genres[:5] if seed_genres else None,
             limit=limit
         )
 
@@ -1144,6 +1146,7 @@ def api_recommendations():
             "seed_info": {
                 "tracks": len(seed_tracks),
                 "artists": len(seed_artists),
+                "genres": len(seed_genres),
                 "total": total_seeds
             }
         })

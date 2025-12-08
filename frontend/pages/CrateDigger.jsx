@@ -1,8 +1,37 @@
 import { useState, useEffect } from 'react'
 
+const availableGenres = [
+  'acoustic', 'afrobeat', 'alt-rock', 'alternative', 'ambient', 'anime', 'black-metal', 'bluegrass', 'blues',
+  'bossanova', 'brazil', 'breakbeat', 'british', 'cantopop', 'chicago-house', 'children', 'chill', 'classical',
+  'club', 'comedy', 'country', 'dance', 'dancehall', 'death-metal', 'deep-house', 'detroit-techno', 'disco',
+  'disney', 'drum-and-bass', 'dub', 'dubstep', 'edm', 'electro', 'electronic', 'emo', 'folk', 'forro', 'french',
+  'funk', 'garage', 'german', 'gospel', 'goth', 'grindcore', 'groove', 'grunge', 'guitar', 'happy', 'hard-rock',
+  'hardcore', 'hardstyle', 'heavy-metal', 'hip-hop', 'holidays', 'honky-tonk', 'house', 'idm', 'indian', 'indie',
+  'indie-pop', 'industrial', 'iranian', 'j-dance', 'j-idol', 'j-pop', 'j-rock', 'jazz', 'k-pop', 'kids', 'latin',
+  'latino', 'malay', 'mandopop', 'metal', 'metal-misc', 'metalcore', 'minimal-techno', 'movies', 'mpb', 'new-age',
+  'new-release', 'opera', 'pagode', 'party', 'philippines-opm', 'piano', 'pop', 'pop-film', 'post-dubstep',
+  'power-pop', 'progressive-house', 'psych-rock', 'punk', 'punk-rock', 'r-n-b', 'rainy-day', 'reggae', 'reggaeton',
+  'road-trip', 'rock', 'rock-n-roll', 'rockabilly', 'romance', 'sad', 'salsa', 'samba', 'sertanejo', 'show-tunes',
+  'singer-songwriter', 'ska', 'sleep', 'songwriter', 'soul', 'soundtracks', 'spanish', 'study', 'summer', 'swedish',
+  'synth-pop', 'tango', 'techno', 'trance', 'trip-hop', 'turkish', 'work-out', 'world-music'
+]
+
+const toTitleCaseGenre = (genre) =>
+  (genre || '')
+    .split('-')
+    .map(word => (word ? word[0].toUpperCase() + word.slice(1) : ''))
+    .join(' ')
+
+const seedTypeLabel = (type) => {
+  if (type === 'track') return 'Track'
+  if (type === 'artist') return 'Artist'
+  if (type === 'genre') return 'Genre'
+  return 'Seed'
+}
+
 function CrateDigger() {
   const [mode, setMode] = useState('select') // 'select' or 'results'
-  const [searchType, setSearchType] = useState('track') // 'track' or 'artist'
+  const [searchType, setSearchType] = useState('track') // 'track' | 'artist' | 'genre'
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [searching, setSearching] = useState(false)
@@ -21,13 +50,32 @@ function CrateDigger() {
     }
 
     const timer = setTimeout(() => {
-      searchSpotify()
+      if (searchType === 'genre') {
+        setSearching(true)
+        setError(null)
+        const q = searchQuery.trim().toLowerCase()
+        const matches = availableGenres
+          .filter(g => g.includes(q))
+          .slice(0, 15)
+          .map(g => ({
+            id: g,
+            name: toTitleCaseGenre(g),
+            artist: 'Genre',
+            type: 'genre',
+            seedType: 'genre'
+          }))
+        setSearchResults(matches)
+        setSearching(false)
+      } else {
+        searchSpotify()
+      }
     }, 500)
 
     return () => clearTimeout(timer)
   }, [searchQuery, searchType])
 
   const searchSpotify = async () => {
+    if (searchType === 'genre') return
     setSearching(true)
     setError(null)
 
@@ -62,7 +110,8 @@ function CrateDigger() {
       return
     }
 
-    setSelectedSeeds([...selectedSeeds, { ...item, seedType: searchType }])
+    const seedType = item.seedType || searchType
+    setSelectedSeeds([...selectedSeeds, { ...item, seedType }])
     setSearchQuery('')
     setSearchResults([])
     setError(null)
@@ -74,7 +123,7 @@ function CrateDigger() {
 
   const getRecommendations = async () => {
     if (selectedSeeds.length === 0) {
-      setError('Please select at least 1 track or artist')
+      setError('Please select at least 1 track, artist, or genre')
       return
     }
 
@@ -85,6 +134,7 @@ function CrateDigger() {
     try {
       const seedTracks = selectedSeeds.filter(s => s.seedType === 'track').map(s => s.id)
       const seedArtists = selectedSeeds.filter(s => s.seedType === 'artist').map(s => s.id)
+      const seedGenres = selectedSeeds.filter(s => s.seedType === 'genre').map(s => s.id)
 
       const res = await fetch('/api/recommendations', {
         method: 'POST',
@@ -92,7 +142,8 @@ function CrateDigger() {
         body: JSON.stringify({
           seed_tracks: seedTracks,
           seed_artists: seedArtists,
-          limit: 50
+          seed_genres: seedGenres,
+          limit: 100
         })
       })
 
@@ -167,6 +218,13 @@ function CrateDigger() {
     setSavedPlaylist(null)
   }
 
+  const seedSubtitle = (seed) => {
+    if (seed.seedType === 'track') return `${seed.artist || 'Track'} · ${seedTypeLabel(seed.seedType)}`
+    if (seed.seedType === 'artist') return `${seed.artist || 'Artist'} · ${seedTypeLabel(seed.seedType)}`
+    if (seed.seedType === 'genre') return `${seed.name || 'Genre'} · ${seedTypeLabel(seed.seedType)}`
+    return seedTypeLabel(seed.seedType)
+  }
+
   const msToMinSec = (ms) => {
     if (ms == null) return ''
     const total = Math.round(ms / 1000)
@@ -181,7 +239,7 @@ function CrateDigger() {
         <p className="feature-label">CrateDigger</p>
         <h2 className="feature-title">Discover new tracks based on your favorites</h2>
         <p className="feature-caption mb-6">
-          Select up to 5 tracks or artists, and we&apos;ll recommend similar music for you.
+          Select up to 5 seeds (tracks, artists, or genres), and we&apos;ll recommend similar music for you.
         </p>
 
         {error && (
@@ -229,13 +287,25 @@ function CrateDigger() {
                 >
                   Search Artists
                 </button>
+                <button
+                  onClick={() => setSearchType('genre')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    searchType === 'genre'
+                      ? 'bg-accent text-white'
+                      : 'bg-white/5 text-text-secondary hover:bg-white/10'
+                  }`}
+                >
+                  Search Genres
+                </button>
               </div>
 
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={`Search for ${searchType === 'track' ? 'tracks' : 'artists'}...`}
+                placeholder={`Search for ${
+                  searchType === 'track' ? 'tracks' : searchType === 'artist' ? 'artists' : 'genres'
+                }...`}
                 className="w-full px-4 py-3 rounded-lg"
                 style={{
                   color: '#ffffff',
@@ -272,7 +342,9 @@ function CrateDigger() {
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-white truncate">{result.name}</div>
-                        <div className="text-sm text-text-secondary truncate">{result.artist}</div>
+                        <div className="text-sm text-text-secondary truncate">
+                          {result.seedType === 'genre' ? 'Genre' : result.artist} · {seedTypeLabel(result.seedType || searchType)}
+                        </div>
                       </div>
                       <svg
                         xmlns="http://www.w3.org/2000/svg"

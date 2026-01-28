@@ -4,7 +4,7 @@ import re
 import time
 import base64
 from collections import Counter
-from typing import Dict, Any, Iterable, List, Optional, Tuple
+from typing import Dict, Any, Iterable, List, Optional, Tuple, Set
 from pathlib import Path
 
 from flask import Flask, redirect, request, session, url_for, render_template, flash, jsonify
@@ -28,6 +28,83 @@ def normalize(s: Optional[str]) -> str:
 
 def safe_get(d: Any, key: str, default=None):
     return d.get(key, default) if isinstance(d, dict) else default
+
+
+def normalize_seed_id(value: Any) -> Optional[str]:
+    """
+    Normalize Spotify seed identifiers (track/artist URIs or IDs) down to bare base62 ids.
+    """
+    if value is None:
+        return None
+    token = str(value).strip()
+    if not token:
+        return None
+    lowered = token.lower()
+    if lowered.startswith("spotify:"):
+        token = token.split(":")[-1]
+    elif "open.spotify.com" in lowered:
+        token = token.split("/")[-1]
+    token = token.split("?")[0]
+    token = token.split("#")[0]
+    token = token.strip()
+    if not token:
+        return None
+    if not re.fullmatch(r"[A-Za-z0-9]{4,}", token):
+        return None
+    return token
+
+
+def dedupe_preserve_order(values: Iterable[str]) -> List[str]:
+    seen: Set[str] = set()
+    ordered: List[str] = []
+    for val in values:
+        if val not in seen:
+            seen.add(val)
+            ordered.append(val)
+    return ordered
+
+
+def normalize_seed_list(values: Iterable[Any]) -> List[str]:
+    normalized = []
+    for raw in values or []:
+        token = normalize_seed_id(raw)
+        if token:
+            normalized.append(token)
+    return dedupe_preserve_order(normalized)
+
+
+def normalize_genre_list(values: Iterable[Any]) -> List[str]:
+    genres: List[str] = []
+    for raw in values or []:
+        if not isinstance(raw, str):
+            continue
+        token = raw.strip().lower()
+        if not token:
+            continue
+        genres.append(token)
+    return dedupe_preserve_order(genres)
+
+
+def filter_existing_tracks(sp: spotipy.Spotify, track_ids: List[str]) -> List[str]:
+    if not track_ids:
+        return []
+    try:
+        resp = sp.tracks(track_ids) or {}
+    except SpotifyException:
+        return track_ids  # best effort; let downstream raise if still invalid
+    valid = {(track or {}).get("id") for track in (resp.get("tracks") or []) if (track or {}).get("id")}
+    return [tid for tid in track_ids if tid in valid]
+
+
+def filter_existing_artists(sp: spotipy.Spotify, artist_ids: List[str]) -> List[str]:
+    if not artist_ids:
+        return []
+    try:
+        resp = sp.artists(artist_ids) or {}
+    except SpotifyException:
+        return artist_ids
+    valid = {(artist or {}).get("id") for artist in (resp.get("artists") or []) if (artist or {}).get("id")}
+    return [aid for aid in artist_ids if aid in valid]
 
 # ---------- Flask ----------
 app = Flask(__name__, static_folder='static/dist', static_url_path='')
@@ -617,6 +694,82 @@ def api_playlist(playlist_id):
         return jsonify({"ok": False, "error": str(e)}), 500
 
 # --- Filter Sweep ---
+
+class FilterSweepUserError(Exception):
+    """Raised when a filter sweep request fails due to user-facing validation issues."""
+
+    def __init__(self, message: str, status_code: int = 400, code: str = "user_error"):
+        super().__init__(message)
+        self.status_code = status_code
+        self.code = code
+
+
+def run_filter_sweep(sp: spotipy.Spotify, playlist_a: Optional[str], playlist_b_list: Optional[List[str]]) -> Dict[str, Any]:
+    playlist_a = (playlist_a or "").strip()
+    playlist_b_list = [pid for pid in (playlist_b_list or []) if pid]
+
+    if not playlist_a or not playlist_b_list:
+        raise FilterSweepUserError(
+            "Select Playlist A (owned) and at least one Playlist B (reference).",
+            code="missing_selection"
+        )
+    if playlist_a in playlist_b_list:
+        raise FilterSweepUserError("Playlist A cannot also be in the reference list.", code="invalid_selection")
+
+    if not user_owns_playlist(sp, playlist_a):
+        raise FilterSweepUserError("Playlist A must be owned by you.", status_code=403, code="not_owned")
+
+    playlist_a_obj = sp.playlist(playlist_a)
+    playlist_a_name = (playlist_a_obj or {}).get("name") or "Playlist A"
+
+    playlist_a_items = playlist_items_with_positions(sp, playlist_a)
+    a_uris: Set[str] = set()
+    track_details: Dict[str, Dict[str, Any]] = {}
+    for item in playlist_a_items:
+        track = safe_get(item, "track") or {}
+        uri = safe_get(track, "uri")
+        if not uri:
+            continue
+        a_uris.add(uri)
+        info = track_details.setdefault(uri, {
+            "uri": uri,
+            "name": safe_get(track, "name") or "Unknown track",
+            "artists": ", ".join(
+                safe_get(artist, "name") or "" for artist in (safe_get(track, "artists") or []) if safe_get(artist, "name")
+            ),
+            "occurrences": 0,
+        })
+        info["occurrences"] = info.get("occurrences", 0) + 1
+
+    if not a_uris:
+        raise FilterSweepUserError(f"\"{playlist_a_name}\" has no tracks.", code="empty_playlist")
+
+    ref_uris = set()
+    for pid in playlist_b_list:
+        ref_uris.update(get_reference_uris(sp, pid))
+
+    to_remove = list(a_uris.intersection(ref_uris))
+    if not to_remove:
+        raise FilterSweepUserError(f"No overlap found. Nothing to remove from \"{playlist_a_name}\".", code="no_overlap")
+
+    to_remove.sort(key=lambda uri: (track_details.get(uri, {}).get("name") or "").lower())
+    removed_tracks: List[Dict[str, Any]] = []
+    for uri in to_remove:
+        info = track_details.get(uri) or {"uri": uri, "name": "Unknown track", "artists": "", "occurrences": 1}
+        removed_tracks.append(info)
+
+    removed_total = sum(info.get("occurrences", 1) for info in removed_tracks)
+
+    for batch in chunks(to_remove, 100):
+        sp.playlist_remove_all_occurrences_of_items(playlist_a, batch)
+
+    return {
+        "removed": removed_total,
+        "playlist_name": playlist_a_name,
+        "removed_tracks": removed_tracks,
+    }
+
+
 @app.route("/filter-sweep", methods=["POST"])
 def filter_sweep():
     """Remove from Playlist A any tracks that appear in one or more reference playlists B."""
@@ -624,56 +777,47 @@ def filter_sweep():
         return redirect(url_for("index"))
 
     playlist_a = request.form.get("playlist_a_id")
-    playlist_b_list = request.form.getlist("playlist_b_id")  # multiple values
-    if not playlist_a or not playlist_b_list:
-        flash("Select Playlist A (owned) and at least one Playlist B (reference).")
-        return redirect(url_for("index"))
-    if playlist_a in playlist_b_list:
-        flash("Playlist A cannot also be in the reference list.")
-        return redirect(url_for("index"))
+    playlist_b_list = request.form.getlist("playlist_b_id")
 
     try:
         sp = get_sp()
-
-        # Ensure A is owned by current user
-        if not user_owns_playlist(sp, playlist_a):
-            flash("Playlist A must be owned by you.")
-            return redirect(url_for("index"))
-
-        # Fetch A (for name + sanity)
-        playlist_a_obj = sp.playlist(playlist_a)
-        playlist_a_name = (playlist_a_obj or {}).get("name", "Playlist A")
-
-        # Collect URIs
-        a_uris = set(get_all_track_uris(sp, playlist_a))
-        if not a_uris:
-            flash(f"“{playlist_a_name}” has no tracks.")
-            return redirect(url_for("index"))
-
-        # Merge B reference URIs
-        ref_uris = set()
-        for pid in playlist_b_list:
-            ref_uris.update(get_reference_uris(sp, pid))
-
-        to_remove = list(a_uris.intersection(ref_uris))
-        if not to_remove:
-            flash(f"No overlap found. Nothing to remove from “{playlist_a_name}”.")
-            return redirect(url_for("index"))
-
-        removed = 0
-        for batch in chunks(to_remove, 100):
-            sp.playlist_remove_all_occurrences_of_items(playlist_a, batch)
-            removed += len(batch)
-
-        flash(f"Filter Sweep complete, removed {removed} track(s) from “{playlist_a_name}”.")
-        return redirect(url_for("index"))
-
+        result = run_filter_sweep(sp, playlist_a, playlist_b_list)
+        track_samples = ", ".join(t.get("name") or "Unknown track" for t in result["removed_tracks"][:3])
+        extra = f" (e.g., {track_samples})" if track_samples else ""
+        flash(f"Filter Sweep complete, removed {result['removed']} track(s) from \"{result['playlist_name']}\"{extra}.")
+    except FilterSweepUserError as e:
+        flash(str(e))
     except SpotifyException as e:
         flash(f"Spotify error: {e}")
-        return redirect(url_for("index"))
     except Exception as e:
         flash(f"Filter Sweep failed: {e}")
-        return redirect(url_for("index"))
+
+    return redirect(url_for("index"))
+
+
+@app.route("/api/filter-sweep", methods=["POST"])
+def api_filter_sweep():
+    if "token_info" not in session:
+        return jsonify({"ok": False, "error": "not_authenticated"}), 401
+
+    playlist_a = request.form.get("playlist_a_id")
+    playlist_b_list = request.form.getlist("playlist_b_id")
+
+    try:
+        sp = get_sp()
+        result = run_filter_sweep(sp, playlist_a, playlist_b_list)
+        return jsonify({
+            "ok": True,
+            "removed": result["removed"],
+            "playlist_name": result["playlist_name"],
+            "removed_tracks": result["removed_tracks"],
+        })
+    except FilterSweepUserError as e:
+        return jsonify({"ok": False, "error": str(e), "code": getattr(e, "code", "user_error")}), getattr(e, "status_code", 400)
+    except SpotifyException as e:
+        return jsonify({"ok": False, "error": "spotify_error", "details": str(e)}), 500
+    except Exception as e:
+        return jsonify({"ok": False, "error": "filter_sweep_failed", "details": str(e)}), 500
 
 
 
@@ -887,7 +1031,7 @@ def api_user_stats():
 
 @app.route("/api/search")
 def api_search():
-    """Search for tracks and albums."""
+    """Search for tracks, artists, and albums."""
     token_info = session.get("token_info")
     if not token_info:
         return jsonify({"ok": False, "error": "not_logged_in"}), 401
@@ -895,14 +1039,16 @@ def api_search():
     sp = spotipy.Spotify(auth=token_info.get("access_token"))
 
     query = request.args.get("q", "").strip()
-    search_type = request.args.get("type", "track,album")
+    raw_types = request.args.get("type", "track,album")
+    requested_types = [t.strip() for t in raw_types.split(',') if t.strip()]
+    search_types = ','.join(requested_types) if requested_types else 'track'
     limit = min(int(request.args.get("limit", 5)), 20)
 
     if not query:
         return jsonify({"ok": True, "results": []})
 
     try:
-        results = sp.search(q=query, type=search_type, limit=limit)
+        results = sp.search(q=query, type=search_types, limit=limit)
         items = []
 
         # Process tracks
@@ -914,6 +1060,7 @@ def api_search():
                 release_year = release_date[:4] if isinstance(release_date, str) else None
                 items.append({
                     "type": "track",
+                    "seedType": "track",
                     "name": track.get("name"),
                     "artist": ", ".join(a.get("name") for a in (track.get("artists") or []) if a.get("name")),
                     "image": album_images[0]["url"] if album_images else None,
@@ -922,6 +1069,24 @@ def api_search():
                     "album": album_info.get("name"),
                     "album_id": album_info.get("id"),
                     "album_year": release_year
+                })
+
+        # Process artists
+        if "artists" in results:
+            for artist in results["artists"]["items"]:
+                images = artist.get("images") or []
+                followers_raw = artist.get("followers") or {}
+                followers_total = followers_raw.get("total") if isinstance(followers_raw, dict) else None
+                items.append({
+                    "type": "artist",
+                    "seedType": "artist",
+                    "name": artist.get("name"),
+                    "artist": artist.get("name"),
+                    "image": images[0]["url"] if images else None,
+                    "id": artist.get("id"),
+                    "uri": (artist.get("external_urls") or {}).get("spotify"),
+                    "genres": (artist.get("genres") or [])[:3],
+                    "followers": followers_total,
                 })
 
         # Process albums
@@ -1091,14 +1256,19 @@ def api_recommendations():
         return jsonify({"ok": False, "error": str(err)}), 401
 
     data = request.get_json() or {}
-    seed_tracks = data.get("seed_tracks", [])
-    seed_artists = data.get("seed_artists", [])
-    seed_genres = data.get("seed_genres", [])
-    limit = 100  # Spotify recommendations endpoint caps at 100
+    seed_tracks_raw = normalize_seed_list(data.get("seed_tracks", []))
+    seed_artists_raw = normalize_seed_list(data.get("seed_artists", []))
+    seed_genres = normalize_genre_list(data.get("seed_genres", []))
 
-    # Validate seeds
-    if not seed_tracks and not seed_artists and not seed_genres:
+    if not seed_tracks_raw and not seed_artists_raw and not seed_genres:
         return jsonify({"ok": False, "error": "no_seeds_provided"}), 400
+
+    seed_tracks = filter_existing_tracks(sp, seed_tracks_raw)
+    seed_artists = filter_existing_artists(sp, seed_artists_raw)
+
+    if not seed_tracks and not seed_artists and not seed_genres:
+        return jsonify({"ok": False, "error": "no_valid_seeds", "details": "Spotify could not use the selected tracks or artists. Try different picks."}), 400
+    limit = 100  # Spotify recommendations endpoint caps at 100
 
     # Spotify API allows max 5 seeds total
     total_seeds = len(seed_tracks) + len(seed_artists) + len(seed_genres)
@@ -1152,6 +1322,12 @@ def api_recommendations():
         })
 
     except SpotifyException as e:
+        if getattr(e, "http_status", None) == 404:
+            return jsonify({
+                "ok": False,
+                "error": "spotify_seed_not_found",
+                "details": "One of your selected tracks or artists is no longer available for recommendations. Remove it and try again."
+            }), 400
         return jsonify({"ok": False, "error": f"spotify_error:{e}"}), 500
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500

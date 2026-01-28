@@ -1,15 +1,22 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { usePlaylists } from '../hooks/usePlaylists'
-import LoadingOverlay from '../components/LoadingOverlay'
 
 function FilterSweep() {
   const { playlists, ownedPlaylists, loading: playlistsLoading } = usePlaylists()
   const [playlistA, setPlaylistA] = useState('')
   const [playlistBList, setPlaylistBList] = useState([])
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState(null)
   const [playlistASearch, setPlaylistASearch] = useState('')
   const [playlistBSearch, setPlaylistBSearch] = useState('')
+  const [resultModal, setResultModal] = useState(null)
+  const ownedCarouselRef = useRef(null)
+  const handleOwnedCarouselWheel = (event) => {
+    const carousel = ownedCarouselRef.current
+    if (!carousel) return
+    if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return
+    event.preventDefault()
+    carousel.scrollLeft += event.deltaY
+  }
 
   const handlePlaylistBToggle = (playlistId) => {
     setPlaylistBList(prev => {
@@ -29,20 +36,27 @@ function FilterSweep() {
     e.preventDefault()
 
     if (!playlistA || playlistBList.length === 0) {
-      setMessage({
-        type: 'error',
-        text: 'Select Playlist A (owned) and at least one Playlist B (reference).'
+      setResultModal({
+        title: 'Select playlists',
+        message: 'Choose Playlist A (owned) and at least one Playlist B (reference) before running Filter Sweep.',
+        tracks: [],
+        emptyState: null
       })
       return
     }
 
     if (playlistBList.includes(playlistA)) {
-      setMessage({ type: 'error', text: 'Playlist A cannot also be in the reference list.' })
+      setResultModal({
+        title: 'Invalid selection',
+        message: 'Playlist A cannot also be in the reference list.',
+        tracks: [],
+        emptyState: null
+      })
       return
     }
 
     setLoading(true)
-    setMessage(null)
+    setResultModal(null)
 
     try {
       const formData = new FormData()
@@ -51,28 +65,64 @@ function FilterSweep() {
         formData.append('playlist_b_id', id)
       })
 
-      const res = await fetch('/filter-sweep', {
+      const res = await fetch('/api/filter-sweep', {
         method: 'POST',
         body: formData
       })
 
-      // Flask will redirect or return a response
-      if (res.redirected) {
-        window.location.href = res.url
+      let data
+      try {
+        data = await res.json()
+      } catch (parseErr) {
+        throw new Error('Unexpected server response.')
+      }
+
+      if (!res.ok || !data?.ok) {
+        const error = new Error(data?.error || 'Filter Sweep failed.')
+        if (data?.code) {
+          error.code = data.code
+        }
+        throw error
+      }
+
+      const removed = data.removed ?? 0
+      const playlistName = data.playlist_name || 'Playlist A'
+      const removedTracks = Array.isArray(data.removed_tracks) ? data.removed_tracks : []
+      const formattedTracks = removedTracks.map(track => {
+        const countPrefix = track?.occurrences && track.occurrences > 1 ? `${track.occurrences}× ` : ''
+        const artists = track?.artists ? ` — ${track.artists}` : ''
+        return `${countPrefix}${track?.name || 'Unknown track'}${artists}`
+      })
+      const preview = formattedTracks.slice(0, 3).join(', ')
+      setResultModal({
+        title: 'Filter Sweep Complete',
+        message: `Removed ${removed} track(s) from ${playlistName}.`,
+        tracks: removedTracks,
+        emptyState: removedTracks.length ? null : 'No overlapping tracks were removed.'
+      })
+    } catch (err) {
+      if (err?.code === 'no_overlap') {
+        setResultModal({
+          title: 'No overlapping tracks',
+          message: err.message || 'No overlapping tracks were found between Playlist A and your references.',
+          tracks: [],
+          emptyState: null
+        })
       } else {
-        const text = await res.text()
-        // Parse any flash messages from the response
-        setMessage({
-          type: 'success',
-          text: 'Filter Sweep completed! Check the results.'
+        const errorText = err?.message || String(err)
+        setResultModal({
+          title: 'Filter Sweep Failed',
+          message: errorText,
+          tracks: [],
+          emptyState: null
         })
       }
-    } catch (err) {
-      setMessage({ type: 'error', text: `Filter Sweep failed: ${String(err)}` })
     } finally {
       setLoading(false)
     }
   }
+
+  const closeResultModal = () => setResultModal(null)
 
   const filteredOwnedPlaylists = useMemo(() => {
     const query = playlistASearch.trim().toLowerCase()
@@ -99,18 +149,6 @@ function FilterSweep() {
         <p className="feature-label m-0">Filter Sweep</p>
         <h2 className="feature-title mt-1 mb-2">Remove from <strong>playlist A</strong> (must be owned by you) any tracks that also appear in one or more{' '}
           <strong>playlist B</strong> selections.</h2>
-
-        {message && (
-          <div
-            className={`mb-6 p-4 rounded-lg border ${
-              message.type === 'error'
-                ? 'bg-red-900/20 border-red-700 text-red-200'
-                : 'bg-green-900/20 border-green-700 text-green-200'
-            }`}
-          >
-            {message.text}
-          </div>
-        )}
 
         <form onSubmit={handleSubmit}>
           <div className="mb-6">
@@ -142,7 +180,11 @@ function FilterSweep() {
                 No owned playlists match "{playlistASearch}"
               </div>
             ) : (
-              <div className="flex gap-3 overflow-x-auto pb-2 pr-1 snap-x snap-mandatory">
+              <div
+                className="flex gap-3 overflow-x-auto pb-2 pr-1 snap-x snap-mandatory"
+                ref={ownedCarouselRef}
+                onWheel={handleOwnedCarouselWheel}
+              >
                 {filteredOwnedPlaylists.map(playlist => {
                   const isSelected = playlistA === playlist.id
                   return (
@@ -285,8 +327,77 @@ function FilterSweep() {
           </div>
         </form>
 
-        {loading && <LoadingOverlay message="Sweeping playlists..." />}
       </section>
+
+      {resultModal && (
+        <div className="modal-backdrop" onClick={closeResultModal}>
+          <div className="modal-panel max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">{resultModal.title}</h3>
+              <button type="button" className="modal-close" onClick={closeResultModal} aria-label="Close dialog">
+                ×
+              </button>
+            </div>
+            <div className="modal-content">
+              <div className="px-6 py-4 border-b border-border">
+                <p className="text-base text-white">{resultModal.message}</p>
+              </div>
+              {resultModal.tracks?.length ? (
+                <div className="modal-list px-6 py-4 space-y-3 max-h-80 overflow-y-auto">
+                  {resultModal.tracks.map((track, idx) => (
+                    <div
+                      key={`${track.uri}-${idx}`}
+                      className="modal-list-item flex items-center gap-4 p-3 rounded-xl border border-white/10"
+                    >
+                      <div className="text-sm text-white/60 w-8">{idx + 1}.</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-base font-medium text-white truncate">
+                          {track?.name || 'Unknown track'}
+                        </div>
+                        <div className="text-sm text-white/60 truncate">
+                          {track?.artists || 'Artist unavailable'}
+                        </div>
+                      </div>
+                      {track?.occurrences > 1 && (
+                        <span className="text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full bg-white/10 text-white/80">
+                          {track.occurrences}×
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                resultModal?.emptyState ? (
+                  <div className="px-6 py-8 text-center text-sm text-white/70">
+                    {resultModal.emptyState}
+                  </div>
+                ) : null
+              )}
+              <div className="px-6 py-4 border-t border-border flex justify-end">
+                <button type="button" className="btn btn-secondary" onClick={closeResultModal}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {loading && (
+        <div className="modal-backdrop" aria-live="assertive" aria-modal="true" role="alertdialog">
+          <div className="modal-panel max-w-md w-full text-center">
+            <div className="px-6 py-8 flex flex-col items-center gap-4">
+              <div className="w-16 h-16 rounded-full border-4 border-white/10 border-t-white/80 animate-spin"></div>
+              <div>
+                <p className="text-lg font-semibold text-white">Sweeping playlists…</p>
+                <p className="text-sm text-white/70 mt-2">
+                  Sit tight while we compare Playlist A against your references.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

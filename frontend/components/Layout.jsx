@@ -10,8 +10,8 @@ function Layout({ children, user }) {
   const navItems = [
     { path: '/', label: 'Dashboard', icon: 'home-icon-w.png' },
     { path: '/view-playlists', label: 'Manage Playlists', icon: 'playlist-view-w.png' },
-    { path: '/cratedigger', label: 'CrateDigger', icon: 'playlist-view-w.png' },
     { path: '/filter-sweep', label: 'Filter Sweep', icon: 'sweep-icon-w.png' },
+    { path: '/cratedigger', label: 'CrateDigger', icon: 'playlist-view-w.png' },
   ]
 
   return (

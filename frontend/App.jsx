@@ -6,6 +6,9 @@ import Dashboard from './pages/Dashboard'
 import ViewPlaylists from './pages/ViewPlaylists'
 import FilterSweep from './pages/FilterSweep'
 import CrateDigger from './pages/CrateDigger'
+import UsbPod from './pages/UsbPod'
+import { DownloadProvider } from './context/DownloadContext'
+import DownloadPopup from './components/DownloadPopup'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(null)
@@ -49,17 +52,21 @@ function App() {
 
   // Authenticated - show main app
   return (
-    <Router>
-      <Layout user={user}>
-        <Routes>
-          <Route path="/" element={<Dashboard initialData={statsData} />} />
-          <Route path="/view-playlists" element={<ViewPlaylists />} />
-          <Route path="/filter-sweep" element={<FilterSweep />} />
-          <Route path="/cratedigger" element={<CrateDigger />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Layout>
-    </Router>
+    <DownloadProvider>
+      <Router>
+        <Layout user={user}>
+          <Routes>
+            <Route path="/" element={<Dashboard initialData={statsData} />} />
+            <Route path="/view-playlists" element={<ViewPlaylists />} />
+            <Route path="/filter-sweep" element={<FilterSweep />} />
+            <Route path="/cratedigger" element={<CrateDigger />} />
+            <Route path="/usbpod" element={<UsbPod />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Layout>
+        <DownloadPopup />
+      </Router>
+    </DownloadProvider>
   )
 }
 

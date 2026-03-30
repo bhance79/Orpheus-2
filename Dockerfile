@@ -4,8 +4,8 @@ FROM python:3.12-slim
 # Set work dir inside the container
 WORKDIR /app
 
-# Install system dependencies if you ever need them (left here commented)
-# RUN apt-get update && apt-get install -y build-essential && rm -rf /var/lib/apt/lists/*
+# Install system dependencies (ffmpeg required by yt-dlp for MP3 conversion)
+RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
 
 # Copy only requirements first (better Docker caching)
 COPY requirements.txt .

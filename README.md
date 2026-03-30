@@ -31,17 +31,35 @@ Crate Digger was a music discovery tool powered by Spotify's recommendations end
 ## Screenshots
 
 **Login**
+
 ![Login](static/screenshots/LogInPage.PNG)
 
-**Dashboard**
+**Dashboard** 
+
 ![Home](static/screenshots/DashboardPage.PNG)
+<div align="right">
+
 [see more](DASHBOARD.md)
 
+</div>
+
 **Manage Playlists**
+
 ![Playlists](static/screenshots/ManagePlaylistsGridView.PNG)
+<div align="right">
+
+[see more](MANAGE_PLAYLISTS.md)
+
+</div>
 
 **Filter Sweep**
+
 ![Filter Sweep](static/screenshots/FilterSweep.PNG)
+<div align="right">
+
+[see more](FILTER_SWEEP.md)
+
+</div>
 
 ---
 
@@ -149,10 +167,10 @@ Flask auto-detects the Vite dev server and redirects there after login so you ge
 
 ## Roadmap
 
-- [ ] Merge Playlists — combine two playlists without duplicates
-- [ ] BPM / duration filters for advanced curation
-- [ ] Export playlists to CSV
-- [ ] Crate Digger v2 — rebuilt without the deprecated recommendations endpoint
+- Merge Playlists — combine two playlists without duplicates
+- BPM / duration filters for advanced curation
+- Export playlists to CSV
+- Crate Digger v2 — rebuilt without the deprecated recommendations endpoint
 
 ---
 

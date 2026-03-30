@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { usePlaylists } from '../hooks/usePlaylists'
-import PlaylistTracksModal from '../components/PlaylistTracksModal'
+import PlaylistTracksModal from '../components/overlays/PlaylistTracksModal'
 
 function ViewPlaylists() {
   const {

@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
 import PillNav from './PillNav'
 
-const ColorBends = lazy(() => import('./ColorBends'))
+const ColorBends = lazy(() => import('../ui/ColorBends'))
 
 function Layout({ children, user }) {
   const location = useLocation()

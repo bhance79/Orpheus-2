@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { usePlaylists } from '../hooks/usePlaylists'
-import LoadingOverlay from '../components/LoadingOverlay'
+import LoadingOverlay from '../components/overlays/LoadingOverlay'
 
 function RemoveDuplicates() {
   const { ownedPlaylists, loading: playlistsLoading } = usePlaylists()

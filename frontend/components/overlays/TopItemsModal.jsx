@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import AnimatedList from './AnimatedList'
+import AnimatedList from '../ui/AnimatedList'
 import AlbumPreviewOverlay from './AlbumPreviewOverlay'
 import ArtistPreviewOverlay from './ArtistPreviewOverlay'
 

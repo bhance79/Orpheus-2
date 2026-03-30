@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import Layout from './components/Layout'
+import Layout from './components/layout/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import ViewPlaylists from './pages/ViewPlaylists'
@@ -8,7 +8,7 @@ import FilterSweep from './pages/FilterSweep'
 import CrateDigger from './pages/CrateDigger'
 import UsbPod from './pages/UsbPod'
 import { DownloadProvider } from './context/DownloadContext'
-import DownloadPopup from './components/DownloadPopup'
+import DownloadPopup from './components/overlays/DownloadPopup'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(null)

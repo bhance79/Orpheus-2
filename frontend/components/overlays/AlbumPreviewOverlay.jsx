@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import SpotlightEffect from './SpotlightEffect'
+import SpotlightEffect from '../ui/SpotlightEffect'
 
 function AlbumPreviewOverlay({ track, onClose }) {
   const [albumDetails, setAlbumDetails] = useState(null)

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
-import TopArtistsShowcase from '../components/TopArtistsShowcase'
-import TopTracks from '../components/TopTracks'
-import TopGenres from '../components/TopGenres'
-import RecentlyPlayed from '../components/RecentlyPlayed'
-import TopItemsModal from '../components/TopItemsModal'
-import LoadingOverlay from '../components/LoadingOverlay'
-import SpotlightCard from '../components/SpotlightCard'
-import PixelCard from '../components/PixelCard'
+import TopArtistsShowcase from '../components/stats/TopArtistsShowcase'
+import TopTracks from '../components/stats/TopTracks'
+import TopGenres from '../components/stats/TopGenres'
+import RecentlyPlayed from '../components/stats/RecentlyPlayed'
+import TopItemsModal from '../components/overlays/TopItemsModal'
+import LoadingOverlay from '../components/overlays/LoadingOverlay'
+import SpotlightCard from '../components/ui/SpotlightCard'
+import PixelCard from '../components/ui/PixelCard'
 
 const TIME_RANGE_LABELS = {
   short_term: 'Last 4 Weeks',

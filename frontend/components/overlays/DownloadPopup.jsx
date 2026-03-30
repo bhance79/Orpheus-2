@@ -1,4 +1,4 @@
-import { useDownload } from '../context/DownloadContext'
+import { useDownload } from '../../context/DownloadContext'
 
 export default function DownloadPopup() {
   const { dlState, cancelDownload, dismissPopup, toggleMinimized } = useDownload()

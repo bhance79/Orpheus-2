@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import AlbumPreviewOverlay from './AlbumPreviewOverlay'
+import AlbumPreviewOverlay from '../overlays/AlbumPreviewOverlay'
 
 const SPOTLIGHT_STORAGE_KEY = 'orpheus_spotlight_selection'
 

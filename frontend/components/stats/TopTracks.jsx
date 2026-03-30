@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import AnimatedList from './AnimatedList'
-import AlbumPreviewOverlay from './AlbumPreviewOverlay'
+import AnimatedList from '../ui/AnimatedList'
+import AlbumPreviewOverlay from '../overlays/AlbumPreviewOverlay'
 
 function TopTracks({ tracks, activeRange, rangeOptions, rangeLabels, onRangeChange, onShowMore, canShowMore, compact }) {
   const [previewTrack, setPreviewTrack] = useState(null)

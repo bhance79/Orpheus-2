@@ -1,6 +1,6 @@
 import { useMemo, useCallback, useState, useEffect, useRef } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
-import ArtistPreviewOverlay from './ArtistPreviewOverlay'
+import ArtistPreviewOverlay from '../overlays/ArtistPreviewOverlay'
 
 function TopArtistsShowcase({ artists, activeRange, rangeOptions, rangeLabels, onRangeChange, onShowMore, canShowMore, compact }) {
   const heroArtists = useMemo(() => artists.slice(0, compact ? 5 : 20), [artists, compact])

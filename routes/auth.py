@@ -24,7 +24,7 @@ def callback():
 
     try:
         oauth = sp_oauth()
-        token_info = oauth.get_access_token(code)
+        token_info = oauth.get_access_token(code, check_cache=False)
     except Exception as e:
         return f"Token exchange failed: {e}"
 

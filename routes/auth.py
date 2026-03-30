@@ -7,6 +7,7 @@ auth_bp = Blueprint("auth", __name__)
 
 @auth_bp.route("/login")
 def login():
+    session.clear()
     try:
         oauth = sp_oauth()
         return redirect(oauth.get_authorize_url())

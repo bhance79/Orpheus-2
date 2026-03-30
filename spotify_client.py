@@ -9,7 +9,7 @@ import requests
 from flask import session
 from spotipy.oauth2 import SpotifyOAuth
 from spotipy.exceptions import SpotifyException
-from spotipy.cache_handler import CacheFileHandler
+from spotipy.cache_handler import MemoryCacheHandler
 
 from utils import getenv_stripped, normalize, safe_get
 
@@ -52,7 +52,7 @@ def sp_oauth() -> SpotifyOAuth:
         client_secret=csec,
         redirect_uri=redir,
         scope=SCOPES,
-        cache_handler=CacheFileHandler(cache_path=".spotipy_cache"),
+        cache_handler=MemoryCacheHandler(),
         open_browser=False,
         show_dialog=True,
     )

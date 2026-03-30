@@ -1,69 +1,67 @@
 # Orpheus 2.0
 
-**Orpheus 2.0** is a Spotify-powered playlist management app built with Flask and Spotipy.  
-It allows you to log in with your Spotify account, view and manage your playlists, clean up duplicates, and perform intelligent “filter sweeps” between playlists — all from a clean and responsive interface.
+**Orpheus 2.0** is a Spotify-powered playlist management and stats app built with Flask and React.
+Log in with your Spotify account to manage playlists, explore your listening stats, and keep your library clean.
 
-**Home Page**
 ![Home Page](static/screenshots/home-view.PNG)
+
+---
 
 ## Features
 
+### Dashboard
+- **Top Artists** — browse your most-listened artists across Last 4 Weeks, Last 6 Months, and All Time
+- **Top Tracks** — see your top songs with album art and Spotify links
+- **Top Genres** — visual breakdown of your genre distribution
+- **Recently Played** — your last 30 tracks with total listening time
+
 ### Playlist Tools
-- **View any playlist** you own or follow
-- **See track details** (title, artist, album, explicit, added date)
+- **View Playlists** — browse any playlist you own or follow, with track details (title, artist, album, explicit flag, added date)
+- **Remove Duplicates** — detects and removes true duplicates even when names differ slightly (e.g. "Song Name – Remastered 2011" vs "Song Name")
+- **Filter Sweep** — remove songs from Playlist A that appear in one or more reference playlists
 
-### Smart Cleaning
-- **Remove Duplicates** — detects true duplicates even if names differ slightly (e.g. “Song Name – Remastered 2011” vs “Song Name”)
-- **Filter Sweep** — remove songs from Playlist A that appear in one or more Playlist B selections
+### CrateDigger
+- Recommendations feature — currently on pause while a replacement for Spotify's retired recommendations endpoint is designed
 
-### Recently Played
-- View your **Recently Played** tracks via the Spotify API (requires `user-read-recently-played` scope)
-- Treated like a pseudo-playlist in the interface
-
-### UI & Usability
-- Responsive layout that scales with window size (no horizontal scroll)
-- Playlist cover image and owner info aligned neatly beside the title
-- Profile picture and “Welcome” header that link back home
-- AJAX-driven updates — no page reloads when viewing playlists
-- Accessibility-friendly flash messaging and ARIA labels
+---
 
 ## Screenshots
-**Log in Page**
+
+**Log In**
 ![Log In](static/screenshots/log-in.PNG)
 
-**Home Page**
+**Dashboard**
 ![Home Page](static/screenshots/home-view.PNG)
 
-**Viewing Tracks**
+**Viewing Playlists**
 ![Tracks View](static/screenshots/playlists-view.PNG)
 
-**Filter Sweep in action**
+**Filter Sweep**
 ![Filter Sweep](static/screenshots/filter-sweep.PNG)
 
+---
 
 ## Tech Stack
 
-- **Python 3.9+**
-- **Flask** – web framework  
-- **Spotipy** – Spotify Web API client  
-- **Requests**, **dotenv** – environment/config helpers  
-- **HTML + CSS + Vanilla JS** – front-end logic  
+**Backend**
+- Python 3.9+
+- Flask — web framework
+- Spotipy — Spotify Web API client
+- python-dotenv — environment config
+
+**Frontend**
+- React 18
+- Vite — build tool and dev server
+- Tailwind CSS — styling
+- React Router — client-side routing
 
 ---
 
 ## Spotify API Setup
 
-You’ll need a Spotify Developer App to get credentials.
-
-1. Go to [Spotify for Developers](https://developer.spotify.com/dashboard/applications)
-2. Create a new application
-3. Add a **Redirect URI**:  
-```
-
-[http://127.0.0.1:5000/callback](http://127.0.0.1:5000/callback)
-
-````
-4. Copy your **Client ID** and **Client Secret**
+1. Go to [Spotify for Developers](https://developer.spotify.com/dashboard/applications) and create a new app
+2. Add a Redirect URI: `http://127.0.0.1:5000/callback`
+3. Copy your **Client ID** and **Client Secret**
 
 Create a `.env` file in the project root:
 
@@ -72,91 +70,93 @@ SPOTIPY_CLIENT_ID=your_spotify_client_id
 SPOTIPY_CLIENT_SECRET=your_spotify_client_secret
 SPOTIPY_REDIRECT_URI=http://127.0.0.1:5000/callback
 FLASK_SECRET_KEY=your_random_secret_key
-````
+```
 
 ---
 
 ## Installation
 
-Clone and set up dependencies:
-
+```bash
+git clone https://github.com/bhance79/Orpheus-2.git
+cd Orpheus-2
 ```
-git clone https://github.com/yourusername/orpheus-2.0.git
-cd orpheus-2.0
+
+**Backend dependencies:**
+```bash
 python -m venv venv
-source venv/bin/activate  # on Windows: venv\Scripts\activate
+source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+**Frontend dependencies:**
+```bash
+npm install
+```
+
 ---
-
-## Running with Docker
-
-`ash
-docker compose up --build
-`
-
-* Builds the image using the included Dockerfile and installs dependencies (including Gunicorn).
-* Mounts .spotipy_cache so Spotify tokens persist between restarts.
-* Serves the app on [http://localhost:5000](http://localhost:5000).
-
-Use docker compose down to stop the container, or docker compose down -v if you also want to clear the cached tokens.
 
 ## Running the App
 
-Start the Flask development server:
+**Option 1 — Production build (Flask serves everything)**
 
-```
-python app.py
-```
-
-Then open in your browser:
-
-```
-http://127.0.0.1:5000/
+```bash
+npm run build       # builds React into static/dist/
+python app.py       # starts Flask on http://127.0.0.1:5000
 ```
 
-Click **Login with Spotify** and authorize the app.
+**Option 2 — Development (hot reload)**
+
+Run both servers together:
+
+```bash
+python app.py       # Flask backend on :5000
+npm run dev         # Vite dev server on :5173 (auto-detected by Flask)
+```
+
+Then open `http://127.0.0.1:5173` in your browser.
+
+**Option 3 — Docker**
+
+```bash
+docker compose up --build
+```
+
+Serves the app on `http://localhost:5000`. Mounts `.spotipy_cache` so Spotify tokens persist between restarts.
+
+```bash
+docker compose down       # stop
+docker compose down -v    # stop + clear cached tokens
+```
 
 ---
 
-## Usage
+## How Features Work
 
-### Home Screen
+### Duplicate Detection
 
-* Shows your Spotify profile picture and name
-* Dropdowns for selecting playlists
-* Option to **View Tracks** or **Remove Duplicates**
-* Filter Sweep tools below (optional)
+Duplicates are matched using canonicalization — minor differences in track names are ignored:
 
-### Playlist View
+| Step | Input | Output |
+|---|---|---|
+| Lowercase | `Song Name (Live)` | `song name (live)` |
+| Remove brackets | `song name (live)` | `song name` |
+| Remove suffixes | `song name – Remastered 2011` | `song name` |
+| Remove feat. | `song name feat. Drake` | `song name` |
+| Normalize artists | `["Drake", "21 Savage"]` | `21 savage & drake` |
 
-* Displays track list with titles, artists, albums, and links
-* Automatically sorted A→Z
-* Shows playlist cover art next to title
-* Displays “by {user}” aligned with title
+Final match key: `"song name\|\|21 savage & drake"` — first occurrence is kept, all others removed.
 
 ### Filter Sweep
 
-* Select **Playlist A** (must be owned by you)
-* Select one or more **Playlist B** entries (reference playlists)
-* Removes any overlapping tracks from Playlist A
-
-### Remove Duplicates
-
-* Click “Remove Duplicates” on any owned playlist
-* The app:
-
-  * Fetches all tracks with their positions
-  * Canonicalizes titles and artists (ignores remix/feat/remaster variants)
-  * Keeps first appearance, removes others
-  * Displays how many duplicates were removed
+1. Select **Playlist A** (must be owned by you)
+2. Select one or more **Playlist B** reference playlists (or Recently Played)
+3. Any track in Playlist A that also appears in any Playlist B is removed
 
 ---
 
-## Permissions Required
+## Permissions
 
-Your Spotify scopes include:
+Spotify scopes requested:
 
 ```
 playlist-read-private
@@ -164,47 +164,34 @@ playlist-read-collaborative
 playlist-modify-private
 playlist-modify-public
 user-read-recently-played
+user-top-read
 ```
 
-> If you receive “Insufficient client scope” errors, log out and reauthorize — this happens when Spotify tokens were issued before new scopes were added.
+> If you see "Insufficient client scope" errors, log out and log back in — this happens when your token predates a scope being added.
 
 ---
 
-## Duplicate Detection Logic (Simplified)
-
-Duplicates are detected using **canonicalization**:
-
-| Step              | Example                                        | Result             |
-| ----------------- | ---------------------------------------------- | ------------------ |
-| Lowercase         | `Song Name (Live)`                             | `song name (live)` |
-| Remove brackets   | `song name (live)` → `song name`               |                    |
-| Remove suffixes   | `song name – remastered 2011` → `song name`    |                    |
-| Remove “feat.”    | `song name feat. Drake` → `song name`          |                    |
-| Normalize artists | `[“Drake”, “21 Savage”]` → `21 savage & drake` |                    |
-
-Final key:
+## Project Structure
 
 ```
-"song name||21 savage & drake"
+app.py                  # Flask app — blueprint registration + entrypoint
+utils.py                # Pure Python helpers
+spotify_client.py       # Spotify OAuth, pagination, playlist/genre helpers
+routes/
+  auth.py               # /login, /callback, /logout
+  playlists.py          # Playlist API, duplicates, filter sweep
+  stats.py              # User stats, search, artist/album details
+  recommendations.py    # Recommendations
+  misc.py               # Static files, diagnostics, catch-all
+frontend/
+  pages/                # React page components
+  components/
+    layout/             # Layout, navigation
+    overlays/           # Modals and popups
+    ui/                 # Reusable UI primitives
+    stats/              # Dashboard stats components
+  hooks/                # Custom React hooks
 ```
-
-Tracks with the same key are grouped, first kept, others removed.
-
-
-## Development Notes
-
-* Flask runs with `debug=True` for development; disable it in production.
-* To avoid 403 on “Recently Played”, ensure your token includes the `user-read-recently-played` scope.
-* Playlist operations that modify data are **restricted to playlists you own** for safety.
-
----
-
-## Future Enhancements
-
-* “Merge Playlists” feature (combine A+B without duplicates)
-* “Duration / BPM filters” for advanced curation
-* Export / import playlists to CSV
-* Better error modals instead of alert boxes
 
 ---
 

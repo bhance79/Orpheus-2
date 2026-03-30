@@ -2,34 +2,26 @@
 
 > A Spotify-powered playlist management and music discovery app built with Flask + React.
 
-![Home Page](static/screenshots/home-view.PNG)
+![Home Page](static/screenshots/DashboardPage.PNG)
 
 ---
 
 ## What It Does
 
-Orpheus connects to your Spotify account and gives you a set of tools that the official Spotify app doesn't — smarter playlist cleaning, cross-playlist filtering, listening stats, and the ability to download your playlists as MP3s for offline or DJ use.
+Orpheus 2.0 connects to your Spotify account and gives you a set of tools that the official Spotify app doesn't — smarter playlist cleaning, cross-playlist filtering, listening stats, and the ability to download your playlists as MP3s for offline or DJ use.
 
 ---
 
 ## Tools
 
 ### Dashboard
-Your listening stats at a glance. See your top artists, top tracks, and top genres across three time ranges (Last 4 Weeks, Last 6 Months, All Time), plus your recently played history.
+Your listening stats at a glance — top artists, top tracks, top genres across three time ranges, and your recently played history. - [See how it works](DASHBOARD.md)
 
-### View Playlists
-Browse any playlist you own or follow. View full track details — title, artist, album, explicit flag, and date added.
-
-### Remove Duplicates
-Detects and removes duplicate tracks from any playlist you own. Duplicates are found by canonicalizing each track's title and artist before comparison, so variants like *"Song Name – Remastered 2011"* and *"Song Name"* are correctly identified as the same track. See [how it works](#duplicate-detection).
+### Manage Playlists
+Browse any playlist you own or follow, remove duplicate tracks, and keep your library clean. - [See how it works](MANAGE_PLAYLISTS.md)
 
 ### Filter Sweep
-Remove songs from one playlist (Playlist A) that already appear in one or more reference playlists (Playlist B). Useful for keeping playlists distinct from each other. See [how I use it](#how-i-use-filter-sweep).
-
-### USB Pod
-Download any playlist as MP3s to a local folder. Tracks are sourced from YouTube via yt-dlp and automatically tagged with title, artist, and cover art. **DJ Mode** searches for extended versions of tracks when available.
-
-> **Requires ffmpeg** to be installed and on your system PATH. The Docker setup handles this automatically.
+Remove songs from one playlist that already appear in one or more reference playlists. Useful for keeping playlists distinct from each other. - [See how it works](FILTER_SWEEP.md)
 
 ### Crate Digger *(currently paused)*
 Crate Digger was a music discovery tool powered by Spotify's recommendations endpoint — that endpoint has since been deprecated by Spotify. A replacement experience is in the works.
@@ -39,16 +31,17 @@ Crate Digger was a music discovery tool powered by Spotify's recommendations end
 ## Screenshots
 
 **Login**
-![Login](static/screenshots/log-in.PNG)
+![Login](static/screenshots/LogInPage.PNG)
 
 **Dashboard**
-![Home](static/screenshots/home-view.PNG)
+![Home](static/screenshots/DashboardPage.PNG)
+[see more](DASHBOARD.md)
 
-**Playlist View**
-![Playlists](static/screenshots/playlists-view.PNG)
+**Manage Playlists**
+![Playlists](static/screenshots/ManagePlaylistsGridView.PNG)
 
 **Filter Sweep**
-![Filter Sweep](static/screenshots/filter-sweep.PNG)
+![Filter Sweep](static/screenshots/FilterSweep.PNG)
 
 ---
 
@@ -128,37 +121,6 @@ npm run dev
 ```
 
 Flask auto-detects the Vite dev server and redirects there after login so you get hot module replacement during development.
-
----
-
-## How I Use Filter Sweep
-
-<!-- Share your personal Filter Sweep workflow here. For example:
-  - What you use as Playlist A (the one you want to clean)
-  - What you use as reference playlists (Playlist B)
-  - Your broader curation strategy or use cases
--->
-
----
-
-## Duplicate Detection
-
-Duplicates are identified by reducing each track to a canonical key before comparison:
-
-| Step | Input | Output |
-|---|---|---|
-| Lowercase | `Song Name (Live)` | `song name (live)` |
-| Strip brackets | `song name (live)` | `song name` |
-| Strip suffixes | `song name – Remastered 2011` | `song name` |
-| Strip feat. | `song name feat. Drake` | `song name` |
-| Normalize artists | `["Drake", "21 Savage"]` | `21 savage & drake` |
-
-The final key used for comparison:
-```
-song name||21 savage & drake
-```
-
-Tracks that share a key are grouped. The earliest occurrence is kept; all others are removed.
 
 ---
 

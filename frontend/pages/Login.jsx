@@ -12,9 +12,9 @@ function Login() {
       </div>
       <main className="main-content main-content--centered">
         <div className="card max-w-md w-full mx-4 text-center backdrop-blur-lg">
-          <h1 className="text-3xl font-bold mb-6">Orpheus 2.0</h1>
+          <img src="/static/icons/orpheusLogo.png" alt="Orpheus 2.0" className="mx-auto mb-6 h-32" />
           <p className="text-text-secondary mb-8">
-            Manage your Spotify playlists with powerful tools
+            Made by me for me
           </p>
           <a href="/login" className="btn w-full block text-center">
             Login with Spotify

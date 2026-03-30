@@ -87,7 +87,8 @@
   }
 
   .navbar-logo {
-    @apply w-8 h-8 object-contain;
+    @apply w-48 object-contain;
+    height: auto;
   }
 
   .navbar-title {

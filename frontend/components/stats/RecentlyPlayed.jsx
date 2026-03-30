@@ -1,4 +1,4 @@
-import AnimatedList from './AnimatedList'
+import AnimatedList from '../ui/AnimatedList'
 
 function RecentlyPlayed({ tracks, recentMinutes, compact }) {
   const previewTracks = tracks.slice(0, compact ? 30 : 40)

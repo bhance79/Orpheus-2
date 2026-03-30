@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import SpotlightEffect from './SpotlightEffect'
+import SpotlightEffect from '../ui/SpotlightEffect'
 import AlbumPreviewOverlay from './AlbumPreviewOverlay'
 
 function ArtistPreviewOverlay({ artist, onClose }) {

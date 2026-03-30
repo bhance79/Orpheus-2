@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { lazy, Suspense } from 'react'
 import PillNav from './PillNav'
 
-const ColorBends = lazy(() => import('./ColorBends'))
+const ColorBends = lazy(() => import('../ui/ColorBends'))
 
 function Layout({ children, user }) {
   const location = useLocation()
@@ -11,8 +11,7 @@ function Layout({ children, user }) {
     { path: '/', label: 'Dashboard', icon: 'home-icon-w.png' },
     { path: '/view-playlists', label: 'Manage Playlists', icon: 'playlist-view-w.png' },
     { path: '/filter-sweep', label: 'Filter Sweep', icon: 'sweep-icon-w.png' },
-    { path: '/usbpod', label: 'USB Pod', icon: 'playlist-view-w.png' },
-    { path: '/cratedigger', label: 'CrateDigger', icon: 'playlist-view-w.png' },
+{ path: '/cratedigger', label: 'CrateDigger', icon: 'playlist-view-w.png' },
   ]
 
   return (

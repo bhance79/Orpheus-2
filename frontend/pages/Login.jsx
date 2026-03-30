@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 
-const ColorBends = lazy(() => import('../components/ColorBends'))
+const ColorBends = lazy(() => import('../components/ui/ColorBends'))
 
 function Login() {
   return (

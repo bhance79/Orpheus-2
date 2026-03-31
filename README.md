@@ -8,7 +8,7 @@
 
 ## What It Does
 
-Orpheus 2.0 connects to your Spotify account and gives you a set of tools that the official Spotify app doesn't — smarter playlist cleaning, cross-playlist filtering, listening stats, and the ability to download your playlists as MP3s for offline or DJ use.
+Orpheus 2.0 connects to your Spotify account and gives you a set of tools that the official Spotify app doesn't — smarter playlist cleaning, cross-playlist filtering and access to listening stats.
 
 ---
 

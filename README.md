@@ -8,23 +8,23 @@
 
 ## What It Does
 
-Orpheus 2.0 connects to your Spotify account and gives you a set of tools that the official Spotify app doesn't — smarter playlist cleaning, cross-playlist filtering and access to listening stats.
+Orpheus 2.0 connects to your Spotify account and gives you a set of tools the official Spotify app doesn't — smarter playlist cleaning, cross-playlist filtering, and detailed listening stats.
 
 ---
 
 ## Tools
 
 ### Dashboard
-Your listening stats at a glance — top artists, top tracks, top genres across three time ranges, and your recently played history. - [See how it works](DASHBOARD.md)
+Your listening stats at a glance — top artists, top tracks, top genres across three time ranges, and your recently played history. — [See how it works](DASHBOARD.md)
 
 ### Manage Playlists
-Browse any playlist you own or follow, remove duplicate tracks, and keep your library clean. - [See how it works](MANAGE_PLAYLISTS.md)
+Browse any playlist you own or follow, inspect its full track list, and remove duplicate tracks. — [See how it works](MANAGE_PLAYLISTS.md)
 
 ### Filter Sweep
-Remove songs from one playlist that already appear in one or more reference playlists. Useful for keeping playlists distinct from each other. - [See how it works](FILTER_SWEEP.md)
+Remove tracks from one playlist that already appear in one or more reference playlists — useful for keeping your library distinct and overlap-free. — [See how it works](FILTER_SWEEP.md)
 
 ### Crate Digger *(currently paused)*
-Crate Digger was a music discovery tool powered by Spotify's recommendations endpoint — that endpoint has since been deprecated by Spotify. A replacement experience is in the works.
+Crate Digger was a music discovery tool powered by Spotify's recommendations endpoint. That endpoint has since been deprecated by Spotify, and a replacement experience is in the works.
 
 ---
 
@@ -34,12 +34,12 @@ Crate Digger was a music discovery tool powered by Spotify's recommendations end
 
 ![Login](static/screenshots/LogInPage.PNG)
 
-**Dashboard** 
+**Dashboard**
 
 ![Home](static/screenshots/DashboardPage.PNG)
 <div align="right">
 
-[see more](DASHBOARD.md)
+[See more](DASHBOARD.md)
 
 </div>
 
@@ -48,7 +48,7 @@ Crate Digger was a music discovery tool powered by Spotify's recommendations end
 ![Playlists](static/screenshots/ManagePlaylistsGridView.PNG)
 <div align="right">
 
-[see more](MANAGE_PLAYLISTS.md)
+[See more](MANAGE_PLAYLISTS.md)
 
 </div>
 
@@ -57,7 +57,7 @@ Crate Digger was a music discovery tool powered by Spotify's recommendations end
 ![Filter Sweep](static/screenshots/FilterSweep.PNG)
 <div align="right">
 
-[see more](FILTER_SWEEP.md)
+[See more](FILTER_SWEEP.md)
 
 </div>
 
@@ -78,11 +78,11 @@ Crate Digger was a music discovery tool powered by Spotify's recommendations end
 
 ### 1. Spotify Developer Setup
 
-Before running the app you need a Spotify Developer application.
+Before running the app, you need a Spotify Developer application.
 
-1. Go to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/applications) and create a new app
+1. Go to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/applications) and create a new app.
 2. Under **Redirect URIs**, add: `http://127.0.0.1:5000/callback`
-3. Copy your **Client ID** and **Client Secret**
+3. Copy your **Client ID** and **Client Secret**.
 
 Create a `.env` file in the project root:
 
@@ -138,7 +138,7 @@ python app.py
 npm run dev
 ```
 
-Flask auto-detects the Vite dev server and redirects there after login so you get hot module replacement during development.
+Flask auto-detects the Vite dev server and proxies requests there after login, giving you hot module replacement during development.
 
 ---
 
@@ -146,7 +146,7 @@ Flask auto-detects the Vite dev server and redirects there after login so you ge
 
 | Scope | Used For |
 |---|---|
-| `playlist-read-private` | Reading your playlists |
+| `playlist-read-private` | Reading your private playlists |
 | `playlist-read-collaborative` | Reading collaborative playlists |
 | `playlist-modify-private` | Editing private playlists |
 | `playlist-modify-public` | Editing public playlists |

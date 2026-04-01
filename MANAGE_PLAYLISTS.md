@@ -1,6 +1,6 @@
 # Manage Playlists
 
-Manage Playlists lets you browse every playlist you own, inspect its full track list, and clean it up by removing duplicates.
+Manage Playlists lets you browse every playlist you own, inspect its full track list, and clean it up by removing duplicate tracks.
 
 ---
 
@@ -18,16 +18,15 @@ Playlists load in two views — switch between them at any time.
 
 ### Search & Filter
 
-- Type in the search bar to filter playlists by name in real time.
+Type in the search bar to filter playlists by name in real time.
 
 ---
 
 ## Track Details
 
-Click any playlist to open its full track list. Tracks load in the background if the playlist is large (100 at a time).
+Click any playlist to open its full track list. Large playlists load in the background in batches of 100.
 
 ![Playlist view](static/screenshots/ManagePlaylistsPlaylistView.PNG)
-
 
 Sorting options inside a playlist:
 - Custom order (default)
@@ -44,11 +43,9 @@ Detects and removes duplicate tracks from any playlist you own.
 
 ![Check Duplicates](static/screenshots/DuplicateCheckFound.PNG)
 
----
-
 ### How Duplicates Are Detected
 
-Tracks are compared using a canonical key — not their raw names. This catches variants that look different on the surface but are the same song:
+Tracks are compared using a normalized canonical key rather than their raw names. This catches variants that look different on the surface but represent the same song — live versions, remasters, and featured artist permutations.
 
 | Step | Input | Output |
 |---|---|---|
@@ -63,11 +60,11 @@ The final key used for comparison:
 song name||21 savage & drake
 ```
 
-Tracks that share a canonical key are grouped. The **first occurrence** is kept; all others are removed.
+Tracks that share a canonical key are grouped together. The **first occurrence** is kept; all subsequent copies are removed.
 
 ---
 
-### Notes
+## Notes
 
 - Remove Duplicates is only available for playlists you own.
 - Removals are processed in batches of 100 via the Spotify API.

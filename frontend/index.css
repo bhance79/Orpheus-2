@@ -116,7 +116,7 @@
   }
 
   .navbar-label {
-    @apply text-sm font-medium;
+    @apply text-base font-medium;
   }
 
   .navbar-right {
@@ -124,7 +124,7 @@
   }
 
   .navbar-user {
-    @apply text-sm text-text-secondary;
+    @apply text-base text-text-secondary;
   }
 
   .navbar-logout {
@@ -172,7 +172,7 @@
       grid-auto-rows: unset;
       grid-template-rows: repeat(2, minmax(0, 1fr));
       grid-template-areas:
-        "welcome welcome spotlight spotlight spotlight spotlight tracks tracks tracks tracks tracks spacer"
+        "welcome welcome spotlight spotlight spotlight tracks tracks tracks tracks spacer spacer spacer"
         "artists artists artists artists artists artists genres genres genres genres extra extra";
     }
   }
@@ -227,6 +227,11 @@
   .dashboard-card--tracks {
     grid-area: tracks;
     overflow-y: auto;
+  }
+
+  .dashboard-card--tracks .card-content {
+    margin-left: -1rem;
+    margin-right: -1rem;
   }
 
   .dashboard-card--artists {
@@ -477,7 +482,7 @@
 
   .top-artists-carousel {
     @apply relative flex flex-col gap-5;
-    padding: clamp(0.5rem, 2vw, 1rem);
+    padding: 0;
     border-radius: 32px;
     background: transparent;
     border: none;
@@ -488,13 +493,15 @@
     .top-artists-carousel {
       flex-direction: row;
       align-items: center;
-      gap: clamp(2rem, 4vw, 3.5rem);
+      gap: clamp(1rem, 2vw, 1.75rem);
     }
   }
 
   .top-artists-carousel-wrapper {
     position: relative;
     width: 100%;
+    flex: 1;
+    min-height: 0;
   }
 
   .top-artists-carousel__viewport {
@@ -539,8 +546,8 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    gap: 0.75rem;
+    justify-content: flex-start;
+    gap: 0;
     user-select: none;
   }
 
@@ -567,9 +574,10 @@
   }
 
   .top-artists-carousel__content h3 {
-    font-size: clamp(1.75rem, 3vw, 2.5rem);
     font-weight: 600;
     margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
   }
 
   .top-artists-carousel__content h3 a {
@@ -591,59 +599,70 @@
 
   .top-artists-carousel__nav {
     position: absolute;
-    top: clamp(0.75rem, 2vw, 1.5rem);
-    right: clamp(0.75rem, 2vw, 1.5rem);
+    bottom: 0;
+    left: 0;
+    right: 0;
     display: flex;
-    gap: 0.5rem;
+    justify-content: space-between;
+    pointer-events: none;
   }
 
   .top-artists-carousel__nav button {
-    width: 36px;
-    height: 36px;
+    pointer-events: all;
+  }
+
+  .top-artists-carousel__nav button {
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    background: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #fff;
-    transition: border-color 0.2s ease, background 0.2s ease;
+    transition: color 0.2s ease;
   }
 
   .top-artists-carousel__nav button:hover {
-    border-color: rgba(255, 255, 255, 0.6);
-    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.6);
   }
 
   .top-artists-carousel__nav svg {
-    width: 16px;
-    height: 16px;
+    width: 22px;
+    height: 22px;
   }
 
   .top-artists-carousel__dots {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
     display: flex;
     justify-content: center;
     gap: 0.5rem;
-    margin-top: 1rem;
+    pointer-events: none;
   }
 
   .top-artists-carousel__dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    border: none;
-    background: rgba(248, 248, 248, 0.557);
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    background: transparent;
     padding: 0;
     cursor: pointer;
-    transition: background 0.2s ease, transform 0.2s ease;
+    pointer-events: all;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
   }
 
   .top-artists-carousel__dot:hover {
-    background: rgba(255, 255, 255, 0.5);
+    border-color: rgba(255, 255, 255, 0.9);
   }
 
   .top-artists-carousel__dot--active {
-    background: #317fd2cf;
+    background: rgba(255, 255, 255, 0.85);
+    border-color: rgba(255, 255, 255, 0.85);
     transform: scale(1.2);
   }
 
@@ -952,10 +971,14 @@
   }
 
   /* Glassmorphism dropdown for genre controls */
+  .genre-custom-select {
+    position: relative;
+  }
+
   .genre-dropdown {
-    @apply text-sm border-0 rounded-lg px-3 py-2 text-white font-medium;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    @apply text-sm rounded-lg px-3 py-1 text-white font-medium flex items-center gap-1.5;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     -webkit-backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -963,19 +986,52 @@
   }
 
   .genre-dropdown:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .genre-dropdown-chevron {
+    width: 12px;
+    height: 12px;
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
+
+  .genre-dropdown-menu {
+    min-width: 120px;
+    background: rgba(18, 18, 26, 1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    padding: 4px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .genre-dropdown-item {
+    @apply text-sm text-white font-medium text-left;
+    padding: 0.35rem 0.75rem;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    white-space: nowrap;
+    transition: background 0.15s ease;
+  }
+
+  .genre-dropdown-item:hover {
     background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.25);
   }
 
-  .genre-dropdown:focus {
-    outline: none;
-    background: rgba(255, 255, 255, 0.18);
-    border-color: rgba(255, 255, 255, 0.35);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 0 0 2px rgba(255, 255, 255, 0.1);
+  .genre-dropdown-item--active {
+    background: rgba(255, 255, 255, 0.08);
   }
 
-  .genre-dropdown option {
-    @apply bg-bg-elevated text-white;
+  .genre-dropdown-item--active:hover {
+    background: rgba(255, 255, 255, 0.15);
   }
 
   /* Track table */
@@ -1099,7 +1155,7 @@
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.3em;
-    padding: 0.4rem 0.9rem;
+    padding: 0.2rem 0.9rem;
     border-radius: 9999px;
     border: 1px solid rgba(255, 255, 255, 0.15);
     color: rgba(255, 255, 255, 0.7);
@@ -1289,5 +1345,7 @@
   }
 }
   .top-artists-card {
-    @apply flex flex-col gap-2;
+    @apply flex flex-col gap-0;
+    flex: 1;
+    min-height: 0;
   }

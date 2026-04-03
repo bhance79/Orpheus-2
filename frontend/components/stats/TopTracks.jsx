@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import AnimatedList from '../ui/AnimatedList'
 import AlbumPreviewOverlay from '../overlays/AlbumPreviewOverlay'
+import CustomSelect from '../ui/CustomSelect'
 
 function TopTracks({ tracks, activeRange, rangeOptions, rangeLabels, onRangeChange, onShowMore, canShowMore, compact }) {
   const [previewTrack, setPreviewTrack] = useState(null)
@@ -52,12 +53,12 @@ function TopTracks({ tracks, activeRange, rangeOptions, rangeLabels, onRangeChan
       <div className="text-lg text-gray-300 w-7 font-semibold">{index + 1}.</div>
       {renderCoverButton(track, 'w-14 h-14', 'rounded-xl')}
       <div className="flex-1 min-w-0">
-        <div className="text-lg font-semibold leading-snug">
+        <div className="text-base font-semibold leading-tight">
           <a href={track.url} target="_blank" rel="noopener noreferrer" className="hover:text-white/70">
             {track.name}
           </a>
         </div>
-        <div className="text-base text-gray-400 truncate">{track.artists}</div>
+        <div className="text-sm text-gray-400 truncate">{track.artists}</div>
       </div>
       <div className="text-sm text-gray-500 truncate text-right max-w-[180px]">{track.album || 'Album unavailable'}</div>
     </div>
@@ -71,16 +72,12 @@ function TopTracks({ tracks, activeRange, rangeOptions, rangeLabels, onRangeChan
             <p className="feature-label m-0">Top tracks</p>
           </div>
           <div className="spotlight-actions">
-            {rangeOptions.map(range => (
-              <button
-                key={range}
-                type="button"
-                className={`spotlight-edit ${activeRange === range ? 'spotlight-edit--active' : ''}`}
-                onClick={() => onRangeChange(range)}
-              >
-                {rangeLabels[range] || range}
-              </button>
-            ))}
+            <CustomSelect
+              value={activeRange}
+              onChange={onRangeChange}
+              options={rangeOptions}
+              labels={rangeLabels}
+            />
             <button
               type="button"
               className={`link-btn ${!canShowMore ? 'link-btn--disabled' : ''}`}
@@ -91,7 +88,7 @@ function TopTracks({ tracks, activeRange, rangeOptions, rangeLabels, onRangeChan
             </button>
           </div>
         </div>
-        <div className="card-content pb-4">
+        <div className="card-content -mt-2 pb-4">
           {previewTracks.length === 0 ? (
             <div className="text-xs text-gray-400">No data</div>
           ) : (
@@ -102,7 +99,7 @@ function TopTracks({ tracks, activeRange, rangeOptions, rangeLabels, onRangeChan
               showGradients={false}
               enableArrowNavigation={false}
               displayScrollbar={false}
-              itemSpacing="0.1rem"
+              itemSpacing="0"
               maxHeight="320px"
             />
           )}

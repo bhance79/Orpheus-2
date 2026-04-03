@@ -111,12 +111,15 @@ def api_user_stats():
             duration_ms = track.get('duration_ms')
             if isinstance(duration_ms, (int, float)):
                 recent_total_ms += duration_ms
+            album_images = (track.get('album') or {}).get('images') or []
+            cover = album_images[0].get('url') if album_images else None
             recently_played.append({
                 'name': track.get('name'),
                 'artists': ', '.join(a.get('name', '') for a in artists),
                 'url': (track.get('external_urls') or {}).get('spotify'),
                 'played_at': item.get('played_at'),
                 'duration_ms': duration_ms,
+                'cover': cover,
             })
         recent_minutes = round(recent_total_ms / 60000) if recent_total_ms else None
 

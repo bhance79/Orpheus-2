@@ -5,6 +5,11 @@ function RecentlyPlayed({ tracks, recentMinutes, compact }) {
 
   const renderCompactItem = (track) => (
     <div className="flex items-center gap-3">
+      {track.cover ? (
+        <img src={track.cover} alt={track.name} className="w-9 h-9 rounded-lg flex-shrink-0 object-cover" />
+      ) : (
+        <div className="w-9 h-9 rounded-lg flex-shrink-0 bg-white/5" />
+      )}
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium truncate">
           <a href={track.url} target="_blank" rel="noopener noreferrer" className="hover:text-white/70">
@@ -18,6 +23,11 @@ function RecentlyPlayed({ tracks, recentMinutes, compact }) {
 
   const renderFullItem = (track) => (
     <div className="flex items-center gap-3">
+      {track.cover ? (
+        <img src={track.cover} alt={track.name} className="w-10 h-10 rounded-lg flex-shrink-0 object-cover" />
+      ) : (
+        <div className="w-10 h-10 rounded-lg flex-shrink-0 bg-white/5" />
+      )}
       <div className="flex-1 min-w-0">
         <div className="font-medium">
           <a href={track.url} target="_blank" rel="noopener noreferrer" className="hover:text-white/70">
@@ -32,7 +42,7 @@ function RecentlyPlayed({ tracks, recentMinutes, compact }) {
   if (compact) {
     return (
       <>
-        <div className="spotlight-header">
+        <div className="spotlight-header pl-2">
           <div>
             <p className="feature-label m-0">Recently Played</p>
           </div>
@@ -40,7 +50,7 @@ function RecentlyPlayed({ tracks, recentMinutes, compact }) {
             <span className="text-[12px] text-gray-400">{recentMinutes} min</span>
           )}
         </div>
-        <div className="card-content pb-2">
+        <div className="card-content -mt-2 pb-2 -mx-2">
           {previewTracks.length === 0 ? (
             <div className="text-xs text-gray-400">No recent tracks</div>
           ) : (
@@ -50,7 +60,7 @@ function RecentlyPlayed({ tracks, recentMinutes, compact }) {
               showGradients={false}
               enableArrowNavigation={false}
               displayScrollbar={false}
-              itemSpacing="0.2rem"
+              itemSpacing="0"
               maxHeight="360px"
             />
           )}

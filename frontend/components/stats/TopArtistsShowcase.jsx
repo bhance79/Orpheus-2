@@ -1,6 +1,31 @@
-import { useMemo, useCallback, useState, useEffect, useRef } from 'react'
+import { useMemo, useCallback, useState, useEffect, useRef, useLayoutEffect } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
 import ArtistPreviewOverlay from '../overlays/ArtistPreviewOverlay'
+import CustomSelect from '../ui/CustomSelect'
+
+function FittedHeading({ name, url }) {
+  const ref = useRef(null)
+
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const MAX = 2.5
+    const MIN = 0.9
+    const STEP = 0.05
+    let size = MAX
+    el.style.fontSize = `${size}rem`
+    while (el.scrollWidth > el.offsetWidth && size > MIN) {
+      size = Math.max(MIN, size - STEP)
+      el.style.fontSize = `${size}rem`
+    }
+  }, [name])
+
+  return (
+    <h3 ref={ref}>
+      <a href={url} target="_blank" rel="noopener noreferrer">{name}</a>
+    </h3>
+  )
+}
 
 function TopArtistsShowcase({ artists, activeRange, rangeOptions, rangeLabels, onRangeChange, onShowMore, canShowMore, compact }) {
   const heroArtists = useMemo(() => artists.slice(0, compact ? 5 : 20), [artists, compact])
@@ -146,16 +171,12 @@ function TopArtistsShowcase({ artists, activeRange, rangeOptions, rangeLabels, o
           <div className="spotlight-header w-full">
             <p className="feature-label m-0">Top artists</p>
             <div className="spotlight-actions">
-              {rangeOptions.map(range => (
-                <button
-                  key={range}
-                  type="button"
-                  className={`spotlight-edit ${activeRange === range ? 'spotlight-edit--active' : ''}`}
-                  onClick={() => onRangeChange(range)}
-                >
-                  {rangeLabels[range] || range}
-                </button>
-              ))}
+              <CustomSelect
+                value={activeRange}
+                onChange={onRangeChange}
+                options={rangeOptions}
+                labels={rangeLabels}
+              />
               <button
                 onClick={onShowMore}
                 type="button"
@@ -202,16 +223,12 @@ function TopArtistsShowcase({ artists, activeRange, rangeOptions, rangeLabels, o
           <p className="feature-label m-0">Top artists</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
-          {rangeOptions.map(range => (
-            <button
-              key={range}
-              type="button"
-              className={`spotlight-edit ${activeRange === range ? 'spotlight-edit--active' : ''}`}
-              onClick={() => onRangeChange(range)}
-            >
-              {rangeLabels[range] || range}
-            </button>
-          ))}
+          <CustomSelect
+            value={activeRange}
+            onChange={onRangeChange}
+            options={rangeOptions}
+            labels={rangeLabels}
+          />
           <button
             type="button"
             className={`link-btn ${!canShowMore ? 'link-btn--disabled' : ''}`}
@@ -247,11 +264,7 @@ function TopArtistsShowcase({ artists, activeRange, rangeOptions, rangeLabels, o
                         <div className="top-artists-carousel__header">
                           <div>
                             <p className="top-artists-carousel__eyebrow"></p>
-                            <h3>
-                              <a href={artist.url} target="_blank" rel="noopener noreferrer">
-                                {artist.name}
-                              </a>
-                            </h3>
+                            <FittedHeading name={artist.name} url={artist.url} />
                             <p className="top-artists-carousel__genre">{primaryGenre || 'Genre unavailable'}</p>
                           </div>
                         </div>
@@ -263,8 +276,11 @@ function TopArtistsShowcase({ artists, activeRange, rangeOptions, rangeLabels, o
                             <div className="grid grid-cols-2 gap-x-6">
                               <div className="flex flex-col gap-2">
                                 {topTracks.slice(0, 5).map((track, idx) => (
-                                  <div key={idx} className="flex items-center gap-2 text-sm">
+                                  <div key={idx} className="flex items-center gap-2 text-base">
                                     <span className="text-gray-500 w-4 flex-shrink-0">{idx + 1}.</span>
+                                    {track.cover && (
+                                      <img src={track.cover} alt="" className="w-7 h-7 rounded flex-shrink-0 object-cover" />
+                                    )}
                                     <a
                                       href={track.url}
                                       target="_blank"
@@ -278,8 +294,11 @@ function TopArtistsShowcase({ artists, activeRange, rangeOptions, rangeLabels, o
                               </div>
                               <div className="flex flex-col gap-2">
                                 {topTracks.slice(5, 10).map((track, idx) => (
-                                  <div key={idx + 5} className="flex items-center gap-2 text-sm">
+                                  <div key={idx + 5} className="flex items-center gap-2 text-base">
                                     <span className="text-gray-500 w-4 flex-shrink-0">{idx + 6}.</span>
+                                    {track.cover && (
+                                      <img src={track.cover} alt="" className="w-7 h-7 rounded flex-shrink-0 object-cover" />
+                                    )}
                                     <a
                                       href={track.url}
                                       target="_blank"

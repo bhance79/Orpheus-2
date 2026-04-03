@@ -52,6 +52,13 @@ function ViewPlaylists() {
     }
   }, [hasMorePlaylists, playlistsLoading, playlistsLoadingMore, loadMorePlaylists, ownedPlaylists.length])
 
+  // When the user is searching, automatically load all remaining playlists
+  useEffect(() => {
+    if (!searchQuery.trim()) return
+    if (!hasMorePlaylists || playlistsLoadingMore || playlistsLoading) return
+    loadMorePlaylists()
+  }, [searchQuery, hasMorePlaylists, playlistsLoadingMore, playlistsLoading, loadMorePlaylists])
+
   const msToMinSec = (ms) => {
     if (ms == null) return ''
     const total = Math.round(ms / 1000)
@@ -147,8 +154,8 @@ function ViewPlaylists() {
               onClick={() => setViewMode('grid')}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                 viewMode === 'grid'
-                  ? 'bg-accent text-white'
-                  : 'bg-white/5 text-text-secondary hover:bg-white/10'
+                  ? 'bg-white/90 text-black'
+                  : 'bg-transparent text-text-secondary hover:bg-white/10'
               }`}
               title="Grid view"
             >
@@ -160,8 +167,8 @@ function ViewPlaylists() {
               onClick={() => setViewMode('list')}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                 viewMode === 'list'
-                  ? 'bg-accent text-white'
-                  : 'bg-white/5 text-text-secondary hover:bg-white/10'
+                  ? 'bg-white/90 text-black'
+                  : 'bg-transparent text-text-secondary hover:bg-white/10'
               }`}
               title="List view"
             >
@@ -200,27 +207,21 @@ function ViewPlaylists() {
 
         <div className="playlist-grid-scroll" ref={scrollContainerRef}>
           {playlistsLoading ? (
-            <p className="text-text-secondary">Loading playlists...</p>
-          ) : filteredPlaylists.length === 0 ? (
-            <>
-              <p className="text-text-secondary">
-                {hasMorePlaylists
-                  ? `No playlists found for "${searchQuery}" yet. Load more to search your remaining playlists.`
-                  : (searchQuery ? `No playlists found matching "${searchQuery}"` : 'No playlists available')}
-              </p>
-              {hasMorePlaylists && (
-                <div className="mt-4">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={loadMorePlaylists}
-                    disabled={playlistsLoadingMore}
-                  >
-                    {playlistsLoadingMore ? 'Loading more playlists...' : 'Load more playlists'}
-                  </button>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-4">
+              {Array.from({ length: 21 }).map((_, i) => (
+                <div key={i} className="animate-pulse" style={{ borderRadius: '16px', padding: '16px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ width: '100%', aspectRatio: '1', borderRadius: '12px', background: 'rgba(255,255,255,0.08)' }} />
+                  <div style={{ height: '12px', marginTop: '10px', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', width: '75%' }} />
+                  <div style={{ height: '10px', marginTop: '6px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', width: '50%' }} />
                 </div>
-              )}
-            </>
+              ))}
+            </div>
+          ) : filteredPlaylists.length === 0 ? (
+            <p className="text-text-secondary">
+              {hasMorePlaylists && searchQuery
+                ? `No matches yet — loading remaining playlists...`
+                : (searchQuery ? `No playlists found matching "${searchQuery}"` : 'No playlists available')}
+            </p>
           ) : (
             <>
               {viewMode === 'grid' ? (
@@ -236,6 +237,7 @@ function ViewPlaylists() {
                         backdropFilter: 'blur(10px)',
                         borderRadius: '16px',
                         padding: '16px',
+
                         transition: 'transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease',
                         cursor: 'pointer',
                         border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -305,6 +307,13 @@ function ViewPlaylists() {
                         {playlist.name}
                       </div>
                     </button>
+                  ))}
+                  {playlistsLoadingMore && Array.from({ length: 7 }).map((_, i) => (
+                    <div key={`skel-${i}`} className="animate-pulse" style={{ borderRadius: '16px', padding: '16px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <div style={{ width: '100%', aspectRatio: '1', borderRadius: '12px', background: 'rgba(255,255,255,0.08)' }} />
+                      <div style={{ height: '12px', marginTop: '10px', borderRadius: '6px', background: 'rgba(255,255,255,0.08)', width: '75%' }} />
+                      <div style={{ height: '10px', marginTop: '6px', borderRadius: '6px', background: 'rgba(255,255,255,0.05)', width: '50%' }} />
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -390,18 +399,6 @@ function ViewPlaylists() {
                 </div>
               )}
 
-              {hasMorePlaylists && (
-                <div className="flex justify-center mt-4">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={loadMorePlaylists}
-                    disabled={playlistsLoadingMore}
-                  >
-                    {playlistsLoadingMore ? 'Loading more playlists...' : 'Load more playlists'}
-                  </button>
-                </div>
-              )}
             </>
           )}
 

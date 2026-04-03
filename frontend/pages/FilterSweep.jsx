@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, useEffect, useCallback } from 'react'
+import useEmblaCarousel from 'embla-carousel-react'
 import { usePlaylists } from '../hooks/usePlaylists'
 
 function FilterSweep() {
@@ -9,14 +10,43 @@ function FilterSweep() {
   const [playlistASearch, setPlaylistASearch] = useState('')
   const [playlistBSearch, setPlaylistBSearch] = useState('')
   const [resultModal, setResultModal] = useState(null)
-  const ownedCarouselRef = useRef(null)
-  const handleOwnedCarouselWheel = (event) => {
-    const carousel = ownedCarouselRef.current
-    if (!carousel) return
-    if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return
-    event.preventDefault()
-    carousel.scrollLeft += event.deltaY
-  }
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false, align: 'start', dragFree: true })
+  const isDragging = useRef(false)
+
+  useEffect(() => {
+    if (!emblaApi) return
+    emblaApi.on('pointerDown', () => { isDragging.current = false })
+    emblaApi.on('scroll', () => { isDragging.current = true })
+  }, [emblaApi])
+
+  useEffect(() => {
+    if (!emblaApi) return
+    const viewport = emblaApi.rootNode()
+    if (!viewport) return
+    let cooldownTimeout = null
+    let isInCooldown = false
+    const onWheel = (e) => {
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+        e.preventDefault()
+        if (isInCooldown) return
+        if (Math.abs(e.deltaX) > 5) {
+          if (e.deltaX > 0) emblaApi.scrollNext()
+          else emblaApi.scrollPrev()
+          isInCooldown = true
+          if (cooldownTimeout) clearTimeout(cooldownTimeout)
+          cooldownTimeout = setTimeout(() => { isInCooldown = false }, 1000)
+        }
+      }
+    }
+    viewport.addEventListener('wheel', onWheel, { passive: false })
+    return () => {
+      viewport.removeEventListener('wheel', onWheel)
+      if (cooldownTimeout) clearTimeout(cooldownTimeout)
+    }
+  }, [emblaApi])
+
+  const scrollPrev = useCallback(() => { if (emblaApi) emblaApi.scrollPrev() }, [emblaApi])
+  const scrollNext = useCallback(() => { if (emblaApi) emblaApi.scrollNext() }, [emblaApi])
 
   const handlePlaylistBToggle = (playlistId) => {
     setPlaylistBList(prev => {
@@ -175,51 +205,72 @@ function FilterSweep() {
                 </svg>
               </div>
             </div>
-            {filteredOwnedPlaylists.length === 0 ? (
+            {playlistsLoading ? (
+              <div className="flex gap-3 overflow-x-auto pb-2 pr-1">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="animate-pulse min-w-[220px] flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+                    <div className="w-14 h-14 rounded-lg bg-white/10 flex-shrink-0" />
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="h-3 bg-white/10 rounded w-3/4" />
+                      <div className="h-2.5 bg-white/5 rounded w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredOwnedPlaylists.length === 0 ? (
               <div className="text-sm text-text-secondary py-6 text-center border border-dashed border-white/10 rounded-xl">
                 No owned playlists match "{playlistASearch}"
               </div>
             ) : (
-              <div
-                className="flex gap-3 overflow-x-auto pb-2 pr-1 snap-x snap-mandatory"
-                ref={ownedCarouselRef}
-                onWheel={handleOwnedCarouselWheel}
-              >
-                {filteredOwnedPlaylists.map(playlist => {
-                  const isSelected = playlistA === playlist.id
-                  return (
-                    <button
-                      type="button"
-                      key={playlist.id}
-                      className={`min-w-[220px] flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all snap-center ${
-                        isSelected
-                          ? 'border-accent/70 bg-accent/10 shadow-[0_0_0_1px_rgba(16,185,129,0.4)]'
-                          : 'border-white/10 bg-white/5 hover:border-white/30'
-                      }`}
-                      onClick={() => setPlaylistA(isSelected ? '' : playlist.id)}
-                      disabled={playlistsLoading}
-                    >
-                      <div className="w-14 h-14 rounded-lg overflow-hidden bg-white/10 flex-shrink-0">
-                        {playlist.images?.[0]?.url ? (
-                          <img src={playlist.images[0].url} alt={playlist.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[10px] uppercase tracking-[0.2em] text-white/40">
-                            cover
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-white truncate">{playlist.name}</div>
-                        <div className="text-xs text-text-secondary">
-                          {(playlist.tracks?.total ?? 0)} tracks
+              <div className="top-album-carousel-wrapper">
+                <div className="top-artists-carousel__viewport" ref={emblaRef}>
+                  <div className="top-artists-carousel__container">
+                    {filteredOwnedPlaylists.map(playlist => {
+                      const isSelected = playlistA === playlist.id
+                      return (
+                        <div className="top-artists-carousel__slide" key={playlist.id} style={{ flex: '0 0 220px' }}>
+                          <button
+                            type="button"
+                            className={`w-full flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
+                              isSelected
+                                ? 'border-accent/70 bg-accent/10 shadow-[0_0_0_1px_rgba(16,185,129,0.4)]'
+                                : 'border-white/10 bg-white/5 hover:border-white/30'
+                            }`}
+                            onClick={() => { if (isDragging.current) return; setPlaylistA(isSelected ? '' : playlist.id) }}
+                            disabled={playlistsLoading}
+                          >
+                            <div className="w-14 h-14 rounded-lg overflow-hidden bg-white/10 flex-shrink-0">
+                              {playlist.images?.[0]?.url ? (
+                                <img src={playlist.images[0].url} alt={playlist.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[10px] uppercase tracking-[0.2em] text-white/40">cover</div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-white truncate">{playlist.name}</div>
+                              <div className="text-xs text-text-secondary">{(playlist.tracks?.total ?? 0)} tracks</div>
+                            </div>
+                            {isSelected && <span className="text-xs font-semibold text-accent">✔</span>}
+                          </button>
                         </div>
-                      </div>
-                      {isSelected && (
-                        <span className="text-xs font-semibold text-accent">✔</span>
-                      )}
+                      )
+                    })}
+                  </div>
+                </div>
+                {filteredOwnedPlaylists.length > 1 && (
+                  <div className="top-artists-carousel__nav">
+                    <button type="button" onClick={scrollPrev} aria-label="Previous playlist">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
                     </button>
-                  )
-                })}
+                    <button type="button" onClick={scrollNext} aria-label="Next playlist">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -259,7 +310,18 @@ function FilterSweep() {
               </div>
             </div>
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-              {filteredReferencePlaylists.length === 0 ? (
+              {playlistsLoading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="animate-pulse flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+                    <div className="w-12 h-12 rounded-lg bg-white/10 flex-shrink-0" />
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="h-3 bg-white/10 rounded w-2/3" />
+                      <div className="h-2.5 bg-white/5 rounded w-1/3" />
+                    </div>
+                    <div className="w-5 h-5 rounded-full border border-white/20" />
+                  </div>
+                ))
+              ) : filteredReferencePlaylists.length === 0 ? (
                 <div className="text-sm text-text-secondary py-6 text-center border border-dashed border-white/10 rounded-xl">
                   No playlists found for "{playlistBSearch}"
                 </div>

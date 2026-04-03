@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react'
 import CustomSelect from '../ui/CustomSelect'
-import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 
 // Color palette for pie chart slices
 const COLORS = [
-  '#2563eb',
-  '#9333ea',
-  '#db2777',
-  '#16a34a',
-  '#ca8a04',
-  '#ea580c',
-  '#d97706',
-  '#0891b2',
+  '#9B5DE5',
+  '#F15BB5',
+  '#FEE440',
+  '#00BBF9',
+  '#00F5D4',
+  '#9B5DE5',
+  '#F15BB5',
+  '#00BBF9',
 ]
 
 const CustomTooltip = ({ active, payload }) => {

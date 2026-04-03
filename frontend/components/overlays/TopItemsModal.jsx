@@ -6,6 +6,7 @@ import ArtistPreviewOverlay from './ArtistPreviewOverlay'
 function TopItemsModal({ isOpen, onClose, items, title, type, activeRange, rangeOptions, rangeLabels, onRangeChange }) {
   const [selectedTrack, setSelectedTrack] = useState(null)
   const [selectedArtist, setSelectedArtist] = useState(null)
+  const [selectedAlbum, setSelectedAlbum] = useState(null)
 
   if (!isOpen) return null
 
@@ -52,7 +53,28 @@ function TopItemsModal({ isOpen, onClose, items, title, type, activeRange, range
                 key={activeRange}
                 items={items}
                 renderItem={(item, index) => (
-                  type === 'artists' ? (
+                  type === 'albums' ? (
+                    <div className="flex items-center gap-4">
+                      <div className="text-lg text-gray-400 w-7">{index + 1}.</div>
+                      {item.cover ? (
+                        <img
+                          src={item.cover}
+                          alt={item.name}
+                          className="w-14 h-14 rounded-xl object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => setSelectedAlbum({ album: item.name, album_year: item.year, artists: item.artists, cover: item.cover, album_id: item.id, url: item.url })}
+                        />
+                      ) : (
+                        <div className="w-14 h-14 rounded-xl bg-gray-700"></div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-lg font-medium">
+                          <a href={item.url} target="_blank" rel="noopener noreferrer" className="hover:text-white/70">{item.name}</a>
+                        </div>
+                        <div className="text-base text-gray-400 truncate">{item.artists}</div>
+                      </div>
+                      <div className="text-base text-gray-500 text-right">{item.year || ''}</div>
+                    </div>
+                  ) : type === 'artists' ? (
                     <div className="flex items-center gap-4">
                       <div className="text-lg text-gray-400 w-7">{index + 1}.</div>
                       {item.image ? (
@@ -123,6 +145,13 @@ function TopItemsModal({ isOpen, onClose, items, title, type, activeRange, range
         <AlbumPreviewOverlay
           track={selectedTrack}
           onClose={() => setSelectedTrack(null)}
+        />
+      )}
+
+      {selectedAlbum && (
+        <AlbumPreviewOverlay
+          track={selectedAlbum}
+          onClose={() => setSelectedAlbum(null)}
         />
       )}
 

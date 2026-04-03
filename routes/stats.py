@@ -75,6 +75,7 @@ def api_user_stats():
                 "album": album.get("name"),
                 "album_year": release_year,
                 "album_id": album.get("id"),
+                "album_url": (album.get("external_urls") or {}).get("spotify"),
                 "cover": album_images[0].get("url") if album_images else None,
                 "artist_ids": artist_ids,
             }
@@ -101,6 +102,26 @@ def api_user_stats():
             "artists": {range_key: summarize_genres(top_artists, range_key) for range_key in TIME_RANGE_KEYS},
             "tracks": {range_key: summarize_genres_from_tracks(top_tracks, artist_genre_lookup, range_key) for range_key in TIME_RANGE_KEYS},
         }
+
+        top_albums: Dict[str, List[Dict[str, Any]]] = {}
+        for range_key, tracks in top_tracks.items():
+            album_map: Dict[str, Any] = {}
+            for t in tracks:
+                aid = t.get('album_id')
+                if not aid:
+                    continue
+                if aid not in album_map:
+                    album_map[aid] = {
+                        'id': aid,
+                        'name': t.get('album'),
+                        'cover': t.get('cover'),
+                        'artists': t.get('artists'),
+                        'year': t.get('album_year'),
+                        'url': t.get('album_url'),
+                        'track_count': 0,
+                    }
+                album_map[aid]['track_count'] += 1
+            top_albums[range_key] = sorted(album_map.values(), key=lambda x: x['track_count'], reverse=True)
 
         recent_data = sp.current_user_recently_played(limit=30) or {}
         recently_played = []
@@ -131,6 +152,7 @@ def api_user_stats():
             "recently_played": recently_played,
             "range_labels": TIME_RANGE_LABELS,
             "top_genres": top_genres,
+            "top_albums": top_albums,
             "recent_minutes_listened": recent_minutes,
         })
 

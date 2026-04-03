@@ -49,12 +49,12 @@ export function usePlaylists(options = {}) {
 
       setPlaylists(prev => {
         const merged = append ? [...prev, ...nextAll] : nextAll
-        return paginated ? sortByName(merged) : merged
+        return paginated ? merged : sortByName(merged)
       })
 
       setOwnedPlaylists(prev => {
         const merged = append ? [...prev, ...nextOwned] : nextOwned
-        return paginated ? sortByName(merged) : merged
+        return paginated ? merged : sortByName(merged)
       })
 
       if (paginated) {

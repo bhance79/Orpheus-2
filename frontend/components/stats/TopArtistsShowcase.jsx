@@ -39,6 +39,13 @@ function TopArtistsShowcase({ artists, activeRange, rangeOptions, rangeLabels, o
   const [artistTopTracks, setArtistTopTracks] = useState({})
   const [loadingTracks, setLoadingTracks] = useState({})
   const abortControllersRef = useRef({})
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    setVisible(false)
+    const t = setTimeout(() => setVisible(true), 40)
+    return () => clearTimeout(t)
+  }, [artists])
 
   useEffect(() => {
     if (!emblaApi) return
@@ -243,7 +250,14 @@ function TopArtistsShowcase({ artists, activeRange, rangeOptions, rangeLabels, o
       {heroArtists.length === 0 ? (
         <div className="text-sm text-gray-400">No artist data available yet.</div>
       ) : (
-        <div className="top-artists-carousel-wrapper">
+        <div
+          className="top-artists-carousel-wrapper"
+          style={{
+            opacity: visible ? 1 : 0,
+            transform: visible ? 'translateY(0)' : 'translateY(8px)',
+            transition: 'opacity 0.35s ease, transform 0.35s ease'
+          }}
+        >
           <div className="top-artists-carousel__viewport" ref={emblaRef}>
             <div className="top-artists-carousel__container">
               {heroArtists.map((artist, index) => {

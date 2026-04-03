@@ -84,7 +84,10 @@ def api_playlists():
                 return normalize(safe_get(safe_get(pl, "owner", {}), "id")) == me_id
 
             owned_items = [pl for pl in items if is_owned(pl)]
+            owned_items.sort(key=lambda p: (p.get("name") or "").lower())
             payload_playlists = owned_items if owned_only else list(items)
+            if not owned_only:
+                payload_playlists.sort(key=lambda p: (p.get("name") or "").lower())
 
             if not owned_only and offset == 0:
                 recent_entry = {
@@ -131,8 +134,17 @@ def api_playlists():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
-@playlists_bp.route("/api/playlist/<playlist_id>")
+@playlists_bp.route("/api/playlist/<playlist_id>", methods=["GET", "DELETE"])
 def api_playlist(playlist_id):
+    if request.method == "DELETE":
+        if "token_info" not in session:
+            return jsonify({"ok": False, "error": "not_authenticated"}), 401
+        try:
+            sp = get_sp()
+            sp.current_user_unfollow_playlist(playlist_id)
+            return jsonify({"ok": True})
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
     if "token_info" not in session:
         return jsonify({"ok": False, "error": "not_authenticated"}), 401
     try:

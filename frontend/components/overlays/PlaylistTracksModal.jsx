@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import CustomSelect from '../ui/CustomSelect'
 
 const SORT_OPTIONS = [
   { value: 'custom', label: 'Custom order' },
@@ -329,17 +330,12 @@ function PlaylistTracksModal({ isOpen, playlist, tracks, loading, error, onClose
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-3">
             <div className="flex items-center gap-3">
               <span className="text-sm text-text-secondary">Sort by:</span>
-              <select
-                className="genre-dropdown"
+              <CustomSelect
                 value={sortOption}
-                onChange={(e) => setSortOption(e.target.value)}
-              >
-                {SORT_OPTIONS.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                onChange={setSortOption}
+                options={SORT_OPTIONS.map(o => o.value)}
+                labels={Object.fromEntries(SORT_OPTIONS.map(o => [o.value, o.label]))}
+              />
             </div>
             <div className="flex gap-2">
               <button

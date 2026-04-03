@@ -3,10 +3,10 @@ import TopArtistsShowcase from '../components/stats/TopArtistsShowcase'
 import TopTracks from '../components/stats/TopTracks'
 import TopGenres from '../components/stats/TopGenres'
 import RecentlyPlayed from '../components/stats/RecentlyPlayed'
+import TopAlbumsCarousel from '../components/stats/TopAlbumsCarousel'
 import TopItemsModal from '../components/overlays/TopItemsModal'
 import LoadingOverlay from '../components/overlays/LoadingOverlay'
 import SpotlightCard from '../components/ui/SpotlightCard'
-import PixelCard from '../components/ui/PixelCard'
 
 const TIME_RANGE_LABELS = {
   short_term: 'Last 4 Weeks',
@@ -19,6 +19,7 @@ function Dashboard({ initialData }) {
   const [statsData, setStatsData] = useState(initialData || null)
   const [activeArtistRange, setActiveArtistRange] = useState('short_term')
   const [activeTrackRange, setActiveTrackRange] = useState('short_term')
+  const [activeAlbumRange, setActiveAlbumRange] = useState('short_term')
   const [activeGenreSource, setActiveGenreSource] = useState('tracks')
   const [activeGenreRange, setActiveGenreRange] = useState('long_term')
   const [showModal, setShowModal] = useState(false)
@@ -35,6 +36,7 @@ function Dashboard({ initialData }) {
         setActiveArtistRange(preferred)
         setActiveTrackRange(preferred)
         setActiveGenreRange(preferred)
+        setActiveAlbumRange(preferred)
       }
     } else {
       loadDashboardStats()
@@ -61,6 +63,7 @@ function Dashboard({ initialData }) {
         setActiveArtistRange(preferred)
         setActiveTrackRange(preferred)
         setActiveGenreRange(preferred)
+        setActiveAlbumRange(preferred)
       }
     } catch (err) {
       console.error('Error loading stats:', err)
@@ -81,7 +84,7 @@ function Dashboard({ initialData }) {
 
   const getModalItems = () => {
     if (!modalType || !statsData) return []
-
+    if (modalType === 'albums') return statsData.top_albums?.[activeAlbumRange] || []
     const dataMap = modalType === 'artists' ? statsData.top_artists : statsData.top_tracks
     const rangeKey = modalType === 'artists' ? activeArtistRange : activeTrackRange
     return dataMap[rangeKey] || []
@@ -89,13 +92,19 @@ function Dashboard({ initialData }) {
 
   const getModalTitle = () => {
     if (!modalType) return ''
-    const rangeKey = modalType === 'artists' ? activeArtistRange : activeTrackRange
+    const rangeKey = modalType === 'albums' ? activeAlbumRange : modalType === 'artists' ? activeArtistRange : activeTrackRange
     const label = statsData?.range_labels?.[rangeKey] || TIME_RANGE_LABELS[rangeKey] || rangeKey
-    return modalType === 'artists' ? `Top Artists — ${label}` : `Top Tracks — ${label}`
+    if (modalType === 'artists') return `Top Artists — ${label}`
+    if (modalType === 'albums') return `Top Albums — ${label}`
+    return `Top Tracks — ${label}`
   }
 
   const canShowMore = (type) => {
     if (!statsData) return false
+    if (type === 'albums') {
+      const items = statsData.top_albums?.[activeAlbumRange] || []
+      return items.length > 5
+    }
     const dataMap = type === 'artists' ? statsData.top_artists : statsData.top_tracks
     const rangeKey = type === 'artists' ? activeArtistRange : activeTrackRange
     const items = dataMap[rangeKey] || []
@@ -108,6 +117,7 @@ function Dashboard({ initialData }) {
   const trackRangeLabel = statsData?.range_labels?.[activeTrackRange] || TIME_RANGE_LABELS[activeTrackRange] || ''
   const canShowArtists = canShowMore('artists')
   const canShowTracks = canShowMore('tracks')
+  const canShowAlbums = canShowMore('albums')
 
   if (loading) {
     return <LoadingOverlay message="Loading your dashboard..." />
@@ -154,9 +164,17 @@ function Dashboard({ initialData }) {
           />
         </section>
 
-        {/* Spacer column */}
+        {/* Top Albums */}
         <section className="dashboard-card dashboard-card--spacer">
-          <PixelCard variant="blue" gap={8} speed={40} />
+          <TopAlbumsCarousel
+            albums={statsData?.top_albums?.[activeAlbumRange] || []}
+            activeRange={activeAlbumRange}
+            rangeOptions={rangeOptions}
+            rangeLabels={statsData?.range_labels || TIME_RANGE_LABELS}
+            onRangeChange={setActiveAlbumRange}
+            onShowMore={() => openModal('albums')}
+            canShowMore={canShowAlbums}
+          />
         </section>
 
         {/* Top Artists */}
@@ -204,10 +222,10 @@ function Dashboard({ initialData }) {
           items={getModalItems()}
           title={getModalTitle()}
           type={modalType}
-          activeRange={modalType === 'artists' ? activeArtistRange : activeTrackRange}
+          activeRange={modalType === 'artists' ? activeArtistRange : modalType === 'albums' ? activeAlbumRange : activeTrackRange}
           rangeOptions={rangeOptions}
           rangeLabels={statsData?.range_labels || TIME_RANGE_LABELS}
-          onRangeChange={modalType === 'artists' ? setActiveArtistRange : setActiveTrackRange}
+          onRangeChange={modalType === 'artists' ? setActiveArtistRange : modalType === 'albums' ? setActiveAlbumRange : setActiveTrackRange}
         />
       )}
     </>

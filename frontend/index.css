@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+
 /* Custom base styles */
 @layer base {
   :root {
@@ -258,12 +259,13 @@
   .dashboard-card--spacer {
     grid-area: spacer;
     display: none;
-    padding: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   @media (min-width: 1024px) {
     .dashboard-card--spacer {
-      display: block;
+      display: flex;
     }
   }
 
@@ -522,9 +524,9 @@
     flex-shrink: 0;
     width: clamp(200px, 24vw, 260px);
     aspect-ratio: 1 / 1;
-    border-radius: 50%;
+    border-radius: 16px;
     background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: none;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -549,6 +551,7 @@
     justify-content: flex-start;
     gap: 0;
     user-select: none;
+    margin-top: -0.75rem;
   }
 
   .top-artists-carousel__header {
@@ -664,6 +667,90 @@
     background: rgba(255, 255, 255, 0.85);
     border-color: rgba(255, 255, 255, 0.85);
     transform: scale(1.2);
+  }
+
+  /* Top Albums carousel */
+  .top-album-card {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .top-album-carousel-wrapper {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .top-album-slide {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0 0.5rem 3rem;
+  }
+
+  .top-album-cover {
+    width: clamp(150px, 72%, 250px);
+    aspect-ratio: 1 / 1;
+    border-radius: 16px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease;
+  }
+
+  .top-album-cover:hover {
+    transform: scale(1.02);
+  }
+
+  .top-album-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .top-album-info {
+    text-align: center;
+  }
+
+  .top-album-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 0.2rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 240px;
+  }
+
+  .top-album-artist {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.55);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 240px;
+  }
+
+  .top-album-year {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.35);
+    margin: 0.15rem 0 0;
+  }
+
+  .top-album-carousel-wrapper .top-artists-carousel__nav {
+    top: 0;
+    bottom: 0;
+    align-items: center;
   }
 
   /* Genre chart */

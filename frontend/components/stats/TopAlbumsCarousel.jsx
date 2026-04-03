@@ -89,20 +89,18 @@ function TopAlbumsCarousel({ albums, activeRange, rangeOptions, rangeLabels, onR
             </div>
           </div>
 
-          {displayAlbums.length > 1 && (
-            <div className="top-artists-carousel__nav">
-              <button type="button" onClick={scrollPrev} aria-label="Previous album">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <button type="button" onClick={scrollNext} aria-label="Next album">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-          )}
+          <div className="top-artists-carousel__nav" style={{ visibility: displayAlbums.length > 1 ? 'visible' : 'hidden' }}>
+            <button type="button" onClick={scrollPrev} aria-label="Previous album">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <button type="button" onClick={scrollNext} aria-label="Next album">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
         </div>
       )}
       {previewAlbum && <AlbumPreviewOverlay track={previewAlbum} onClose={() => setPreviewAlbum(null)} />}

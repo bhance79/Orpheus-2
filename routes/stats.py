@@ -1,5 +1,6 @@
 from typing import Any, Dict, List
 
+import requests as http_requests
 import spotipy
 from flask import Blueprint, jsonify, request, session
 from spotipy.exceptions import SpotifyException
@@ -312,6 +313,54 @@ def api_artist_details(artist_id: str):
             "albums": albums_list,
         }
     })
+
+
+@stats_bp.route("/api/artists/<artist_id>/bio")
+def api_artist_bio(artist_id: str):
+    # Get artist name from Spotify first
+    try:
+        sp = get_sp()
+        artist = sp.artist(artist_id) or {}
+        artist_name = artist.get("name", "")
+    except Exception as err:
+        return jsonify({"ok": False, "error": str(err)}), 500
+
+    if not artist_name:
+        return jsonify({"ok": False, "error": "artist_not_found"}), 404
+
+    # Fetch full intro section from Wikipedia (much more detailed than /page/summary)
+    try:
+        params = {
+            "action": "query",
+            "titles": artist_name,
+            "prop": "extracts|info",
+            "exintro": True,       # intro section only (before first heading)
+            "explaintext": True,   # plain text, no wiki markup
+            "inprop": "url",
+            "format": "json",
+            "redirects": 1,
+        }
+        resp = http_requests.get(
+            "https://en.wikipedia.org/w/api.php",
+            params=params,
+            timeout=8,
+            headers={"User-Agent": "Orpheus/2.0"},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        pages = (data.get("query") or {}).get("pages") or {}
+        page = next(iter(pages.values()), {})
+
+        if page.get("pageid") == -1 or not page.get("extract"):
+            return jsonify({"ok": True, "bio": None, "source": None})
+
+        return jsonify({
+            "ok": True,
+            "bio": page["extract"].strip(),
+            "source": page.get("fullurl"),
+        })
+    except Exception as err:
+        return jsonify({"ok": False, "error": str(err)}), 500
 
 
 @stats_bp.route("/api/albums/<album_id>")

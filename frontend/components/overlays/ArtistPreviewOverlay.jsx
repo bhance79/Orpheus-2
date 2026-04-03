@@ -1,5 +1,6 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
+import useEmblaCarousel from 'embla-carousel-react'
 import SpotlightEffect from '../ui/SpotlightEffect'
 import AlbumPreviewOverlay from './AlbumPreviewOverlay'
 
@@ -8,7 +9,51 @@ function ArtistPreviewOverlay({ artist, onClose }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [selectedAlbum, setSelectedAlbum] = useState(null)
-  const albumsGridRef = useRef(null)
+  const [bioVisible, setBioVisible] = useState(false)
+  const [bio, setBio] = useState(null)
+  const [bioLoading, setBioLoading] = useState(false)
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false, align: 'start', dragFree: true })
+
+  const handleImageClick = async () => {
+    setBioVisible(v => !v)
+    if (!bio && !bioLoading && artist?.id) {
+      setBioLoading(true)
+      try {
+        const res = await fetch(`/api/artists/${artist.id}/bio`)
+        const data = await res.json()
+        setBio(data.ok && data.bio ? data.bio : 'No biography available for this artist.')
+      } catch {
+        setBio('Could not load biography.')
+      } finally {
+        setBioLoading(false)
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (!emblaApi) return
+    const viewport = emblaApi.rootNode()
+    if (!viewport) return
+    let cooldown = null
+    let inCooldown = false
+    const onWheel = (e) => {
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+        e.preventDefault()
+        if (inCooldown) return
+        if (Math.abs(e.deltaX) > 5) {
+          e.deltaX > 0 ? emblaApi.scrollNext() : emblaApi.scrollPrev()
+          inCooldown = true
+          if (cooldown) clearTimeout(cooldown)
+          cooldown = setTimeout(() => { inCooldown = false }, 800)
+        }
+      }
+    }
+    viewport.addEventListener('wheel', onWheel, { passive: false })
+    return () => { viewport.removeEventListener('wheel', onWheel); if (cooldown) clearTimeout(cooldown) }
+  }, [emblaApi])
+
+  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi])
+  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi])
 
   const portalTarget = typeof document !== 'undefined' ? document.body : null
 
@@ -66,46 +111,6 @@ function ArtistPreviewOverlay({ artist, onClose }) {
     }
   }, [artist])
 
-  useEffect(() => {
-    const albumsGrid = albumsGridRef.current
-    if (!albumsGrid) return
-
-    let scrollTimeout
-    const handleWheel = (e) => {
-      if (e.deltaY !== 0) {
-        e.preventDefault()
-
-        // Clear any existing scroll timeout
-        if (scrollTimeout) {
-          clearTimeout(scrollTimeout)
-        }
-
-        // Calculate new scroll position
-        const scrollAmount = e.deltaY * 3.5
-        const newScrollLeft = albumsGrid.scrollLeft + scrollAmount
-
-        // Use scrollTo for smooth scrolling
-        albumsGrid.scrollTo({
-          left: newScrollLeft,
-          behavior: 'smooth'
-        })
-
-        // Debounce to allow smooth scrolling to complete
-        scrollTimeout = setTimeout(() => {
-          scrollTimeout = null
-        }, 100)
-      }
-    }
-
-    albumsGrid.addEventListener('wheel', handleWheel, { passive: false })
-
-    return () => {
-      albumsGrid.removeEventListener('wheel', handleWheel)
-      if (scrollTimeout) {
-        clearTimeout(scrollTimeout)
-      }
-    }
-  }, [artistDetails])
 
   if (!artist || !portalTarget) {
     return null
@@ -133,8 +138,10 @@ function ArtistPreviewOverlay({ artist, onClose }) {
 
   const cardContentStyle = {
     display: 'flex',
-    gap: '3rem',
+    gap: '2rem',
     position: 'relative',
+    maxWidth: '1100px',
+    width: '100%',
   }
 
   const closeButtonStyle = {
@@ -152,14 +159,14 @@ function ArtistPreviewOverlay({ artist, onClose }) {
 
   const imageContainerStyle = {
     flexShrink: 0,
-    width: '500px',
-    height: '500px',
+    width: '550px',
+    height: '550px',
   }
 
   const imageStyle = {
     width: '100%',
     height: '100%',
-    borderRadius: '50%',
+    borderRadius: '20px',
     backgroundColor: '#9ca3af',
     display: 'flex',
     alignItems: 'center',
@@ -183,7 +190,7 @@ function ArtistPreviewOverlay({ artist, onClose }) {
   }
 
   const nameStyle = {
-    fontSize: '3.5rem',
+    fontSize: '2.5rem',
     fontWeight: 'bold',
     color: '#fff',
     margin: 0,
@@ -214,27 +221,7 @@ function ArtistPreviewOverlay({ artist, onClose }) {
     fontSize: '1.5rem',
   }
 
-  const albumsGridStyle = {
-    display: 'flex',
-    gap: '1rem',
-    overflowX: 'auto',
-    overflowY: 'hidden',
-    paddingBottom: '0.5rem',
-    scrollbarWidth: 'thin',
-    scrollbarColor: '#4b5563 transparent',
-    maxWidth: 'calc(200px * 3 + 1rem * 2)',
-    scrollBehavior: 'smooth',
-    scrollSnapType: 'x mandatory',
-  }
-
-  const albumItemStyle = {
-    flexShrink: 0,
-    width: '200px',
-    cursor: 'pointer',
-    scrollSnapAlign: 'start',
-  }
-
-  const albumCoverStyle = {
+const albumCoverStyle = {
     width: '200px',
     height: '200px',
     borderRadius: '0.5rem',
@@ -294,7 +281,7 @@ function ArtistPreviewOverlay({ artist, onClose }) {
     <>
       {createPortal(
         <div style={overlayStyle} onClick={handleBackdropClick}>
-          <SpotlightEffect spotlightColor="rgba(0, 82, 255, 0.25)">
+          <SpotlightEffect spotlightColor="rgba(255, 255, 255, 0.12)">
             <div style={cardContentStyle}>
               <button
                 type="button"
@@ -305,13 +292,31 @@ function ArtistPreviewOverlay({ artist, onClose }) {
                 ×
               </button>
 
-              <div style={imageContainerStyle}>
-                <div style={imageStyle}>
+              <div style={{ ...imageContainerStyle, position: 'relative', cursor: 'pointer', flexShrink: 0 }} onClick={handleImageClick}>
+                <div style={{ ...imageStyle, transition: 'filter 0.4s ease', filter: bioVisible ? 'blur(4px) brightness(0.25)' : 'none' }}>
                   {artistImage ? (
                     <img src={artistImage} alt={`${artistName} profile`} style={artistImageStyle} />
                   ) : (
                     'artist image'
                   )}
+                </div>
+                <div style={{
+                  position: 'absolute', inset: 0, borderRadius: '20px',
+                  padding: '1.25rem', overflowY: 'auto',
+                  opacity: bioVisible ? 1 : 0,
+                  transition: 'opacity 0.4s ease',
+                  pointerEvents: bioVisible ? 'auto' : 'none',
+                  display: 'flex', flexDirection: 'column', gap: '0.75rem',
+                }}>
+                  <p style={{ fontSize: '0.7rem', letterSpacing: '0.25em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', margin: 0 }}>Biography</p>
+                  {bioLoading ? (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+                      <div style={{ width: '28px', height: '28px', border: '2px solid rgba(255,255,255,0.2)', borderTopColor: 'rgba(255,255,255,0.7)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: '1rem', lineHeight: 1.7, color: 'rgba(255,255,255,0.9)', margin: 0 }}>{bio}</p>
+                  )}
+                  <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)', margin: 0 }}>Click to close</p>
                 </div>
               </div>
 
@@ -333,35 +338,59 @@ function ArtistPreviewOverlay({ artist, onClose }) {
                 ) : albums.length === 0 ? (
                   <div style={{ color: '#9ca3af', fontSize: '0.875rem' }}>Discography unavailable.</div>
                 ) : (
-                  <div ref={albumsGridRef} style={albumsGridStyle}>
-                    {albums.map((album) => {
-                      const releaseYear = album.release_date ? album.release_date.substring(0, 4) : ''
-                      return (
-                        <div
-                          key={album.id || album.name}
-                          style={albumItemStyle}
-                          onClick={() => setSelectedAlbum(album)}
+                  <div style={{ position: 'relative' }}>
+                    <div style={{ overflow: 'hidden' }} ref={emblaRef}>
+                      <div style={{ display: 'flex', gap: '1rem' }}>
+                        {albums.map((album) => {
+                          const releaseYear = album.release_date ? album.release_date.substring(0, 4) : ''
+                          return (
+                            <div
+                              key={album.id || album.name}
+                              style={{ flex: '0 0 180px', cursor: 'pointer' }}
+                              onClick={() => setSelectedAlbum(album)}
+                            >
+                              <div
+                                style={albumCoverStyle}
+                                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                              >
+                                {album.cover ? (
+                                  <img src={album.cover} alt={album.name} style={albumImageStyle} />
+                                ) : (
+                                  'album cover'
+                                )}
+                              </div>
+                              <div style={albumNameStyle} title={album.name}>{album.name}</div>
+                              {releaseYear && <div style={albumYearStyle}>{releaseYear}</div>}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                    {albums.length > 3 && (
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                        <button
+                          type="button"
+                          onClick={scrollPrev}
+                          aria-label="Previous albums"
+                          style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', flexShrink: 0 }}
                         >
-                          <div
-                            style={albumCoverStyle}
-                            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                          >
-                            {album.cover ? (
-                              <img src={album.cover} alt={album.name} style={albumImageStyle} />
-                            ) : (
-                              'album cover'
-                            )}
-                          </div>
-                          <div style={albumNameStyle} title={album.name}>
-                            {album.name}
-                          </div>
-                          {releaseYear && (
-                            <div style={albumYearStyle}>{releaseYear}</div>
-                          )}
-                        </div>
-                      )
-                    })}
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={scrollNext}
+                          aria-label="Next albums"
+                          style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', flexShrink: 0 }}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

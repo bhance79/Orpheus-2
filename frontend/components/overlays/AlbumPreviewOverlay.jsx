@@ -214,7 +214,7 @@ function AlbumPreviewOverlay({ track, onClose }) {
 
   return createPortal(
     <div style={overlayStyle} onClick={handleBackdropClick}>
-      <SpotlightEffect spotlightColor="rgba(0, 82, 255, 0.25)">
+      <SpotlightEffect spotlightColor="rgba(255, 255, 255, 0.12)">
         <div style={cardContentStyle}>
           <button
             type="button"

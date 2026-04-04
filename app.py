@@ -4,7 +4,7 @@ from pathlib import Path
 from flask import Flask
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).with_name(".env"), override=True)
+load_dotenv(Path(__file__).with_name(".env"), override=False)
 
 from routes.auth import auth_bp
 from routes.playlists import playlists_bp

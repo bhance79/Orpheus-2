@@ -1,7 +1,10 @@
+import logging
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, jsonify, request, session
 from spotipy.exceptions import SpotifyException
+
+logger = logging.getLogger(__name__)
 
 from spotify_client import (
     RECENT_ID,
@@ -12,51 +15,13 @@ from spotify_client import (
     get_sp,
     list_all_playlists,
     list_owned_playlists,
-    paginate,
     playlist_items_with_positions,
     canonical_title,
     canonical_artists,
 )
-from utils import normalize, safe_get
+from utils import normalize, safe_get, is_valid_spotify_id
 
 playlists_bp = Blueprint("playlists", __name__)
-
-
-# ---------- Legacy template view ----------
-@playlists_bp.route("/select", methods=["POST"])
-def select():
-    if "token_info" not in session:
-        return redirect(url_for("misc.index"))
-
-    playlist_id = request.form.get("playlist_id")
-    if not playlist_id:
-        flash("Please select a playlist.")
-        return redirect(url_for("misc.index"))
-
-    try:
-        sp = get_sp()
-        playlist = sp.playlist(playlist_id)
-        items = list(paginate(lambda o, l: sp.playlist_items(playlist_id, limit=l, offset=o)))
-        rows: List[Dict[str, Any]] = []
-        for it in items:
-            if not isinstance(it, dict):
-                continue
-            track = safe_get(it, "track", {})
-            if not isinstance(track, dict):
-                continue
-            rows.append({
-                "name": safe_get(track, "name"),
-                "artists": ", ".join(safe_get(a, "name", "") for a in (safe_get(track, "artists", []) or [])),
-                "album": safe_get(safe_get(track, "album", {}), "name"),
-                "added_at": safe_get(it, "added_at"),
-                "url": safe_get(safe_get(track, "external_urls", {}), "spotify"),
-                "explicit": safe_get(track, "explicit"),
-                "duration_ms": safe_get(track, "duration_ms"),
-            })
-        return render_template("playlist.html", playlist=playlist, tracks=rows)
-    except Exception as e:
-        flash(f"Failed to load playlist: {e}")
-        return redirect(url_for("misc.index"))
 
 
 # ---------- Playlists API ----------
@@ -130,12 +95,15 @@ def api_playlists():
             "playlists": all_pl,
             "owned_playlists": owned
         })
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+    except Exception:
+        logger.exception("Unexpected error in api_playlists")
+        return jsonify({"ok": False, "error": "internal_error"}), 500
 
 
 @playlists_bp.route("/api/playlist/<playlist_id>", methods=["GET", "DELETE"])
 def api_playlist(playlist_id):
+    if playlist_id != RECENT_ID and not is_valid_spotify_id(playlist_id):
+        return jsonify({"ok": False, "error": "invalid_playlist_id"}), 400
     if request.method == "DELETE":
         if "token_info" not in session:
             return jsonify({"ok": False, "error": "not_authenticated"}), 401
@@ -143,8 +111,9 @@ def api_playlist(playlist_id):
             sp = get_sp()
             sp.current_user_unfollow_playlist(playlist_id)
             return jsonify({"ok": True})
-        except Exception as e:
-            return jsonify({"ok": False, "error": str(e)}), 500
+        except Exception:
+            logger.exception("Error unfollowing playlist %s", playlist_id)
+            return jsonify({"ok": False, "error": "internal_error"}), 500
     if "token_info" not in session:
         return jsonify({"ok": False, "error": "not_authenticated"}), 401
     try:
@@ -241,20 +210,26 @@ def api_playlist(playlist_id):
             "has_more": has_more,
             "offset": offset,
         })
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+    except Exception:
+        logger.exception("Unexpected error in api_playlist %s", playlist_id)
+        return jsonify({"ok": False, "error": "internal_error"}), 500
 
 
 # ---------- Duplicates ----------
 @playlists_bp.route("/api/check-duplicates/<playlist_id>", methods=["GET"])
 def api_check_duplicates(playlist_id):
+    if not is_valid_spotify_id(playlist_id):
+        return jsonify({"ok": False, "error": "invalid_playlist_id"}), 400
     if "token_info" not in session:
         return jsonify({"ok": False, "error": "not_authenticated"}), 401
     try:
         sp = get_sp()
 
+        # Fetch playlist once — used for both ownership check and name
         try:
-            if not _user_owns_playlist(sp, playlist_id):
+            pl = sp.playlist(playlist_id)
+            owner_id = normalize((pl.get("owner") or {}).get("id") or "")
+            if owner_id != normalize(current_user_id(sp)):
                 return jsonify({"ok": False, "error": "playlist_not_owned"}), 403
         except Exception:
             return jsonify({"ok": False, "error": "ownership_check_failed"}), 400
@@ -292,7 +267,6 @@ def api_check_duplicates(playlist_id):
                 "duplicates_to_remove": len(dups),
             })
 
-        pl = sp.playlist(playlist_id)
         return jsonify({
             "ok": True,
             "has_duplicates": len(duplicates) > 0,
@@ -302,24 +276,32 @@ def api_check_duplicates(playlist_id):
         })
 
     except SpotifyException as e:
-        return jsonify({"ok": False, "error": f"spotify_error:{e}"}), 500
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+        logger.error("Spotify error in check-duplicates %s: %s", playlist_id, e)
+        return jsonify({"ok": False, "error": "spotify_error"}), 500
+    except Exception:
+        logger.exception("Unexpected error in check-duplicates %s", playlist_id)
+        return jsonify({"ok": False, "error": "internal_error"}), 500
 
 
 @playlists_bp.route("/api/remove-duplicates/<playlist_id>", methods=["POST"])
 def api_remove_duplicates(playlist_id):
+    if not is_valid_spotify_id(playlist_id):
+        return jsonify({"ok": False, "error": "invalid_playlist_id"}), 400
     if "token_info" not in session:
         return jsonify({"ok": False, "error": "not_authenticated"}), 401
     try:
         sp = get_sp()
 
+        # Fetch playlist once — used for both ownership check and name
         try:
-            if not _user_owns_playlist(sp, playlist_id):
+            pl = sp.playlist(playlist_id)
+            owner_id = normalize((pl.get("owner") or {}).get("id") or "")
+            if owner_id != normalize(current_user_id(sp)):
                 return jsonify({"ok": False, "error": "playlist_not_owned"}), 403
         except Exception:
             return jsonify({"ok": False, "error": "ownership_check_failed"}), 400
 
+        playlist_name = pl.get("name", "")
         items = playlist_items_with_positions(sp, playlist_id)
 
         groups: Dict[str, List[Tuple[int, str, str, str]]] = {}
@@ -354,8 +336,7 @@ def api_remove_duplicates(playlist_id):
             })
 
         if not removal_map:
-            pl = sp.playlist(playlist_id)
-            return jsonify({"ok": True, "removed_count": 0, "playlist_name": pl.get("name", ""), "details": []})
+            return jsonify({"ok": True, "removed_count": 0, "playlist_name": playlist_name, "details": []})
 
         payload = [{"uri": uri, "positions": sorted(pos_list)} for uri, pos_list in removal_map.items()]
         removed_count = sum(len(p["positions"]) for p in payload)
@@ -364,18 +345,14 @@ def api_remove_duplicates(playlist_id):
             batch = payload[batch_start:batch_start + 100]
             sp.playlist_remove_specific_occurrences_of_items(playlist_id, batch)
 
-        pl = sp.playlist(playlist_id)
-        return jsonify({"ok": True, "removed_count": removed_count, "playlist_name": pl.get("name", ""), "details": details})
+        return jsonify({"ok": True, "removed_count": removed_count, "playlist_name": playlist_name, "details": details})
 
     except SpotifyException as e:
-        return jsonify({"ok": False, "error": f"spotify_error:{e}"}), 500
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
-
-
-@playlists_bp.route("/remove-duplicates/<playlist_id>", methods=["POST"])
-def remove_duplicates_alias(playlist_id):
-    return api_remove_duplicates(playlist_id)
+        logger.error("Spotify error in remove-duplicates %s: %s", playlist_id, e)
+        return jsonify({"ok": False, "error": "spotify_error"}), 500
+    except Exception:
+        logger.exception("Unexpected error in remove-duplicates %s", playlist_id)
+        return jsonify({"ok": False, "error": "internal_error"}), 500
 
 
 # ---------- Filter Sweep ----------
@@ -452,30 +429,6 @@ def run_filter_sweep(sp, playlist_a: Optional[str], playlist_b_list: Optional[Li
     }
 
 
-@playlists_bp.route("/filter-sweep", methods=["POST"])
-def filter_sweep():
-    if "token_info" not in session:
-        return redirect(url_for("misc.index"))
-
-    playlist_a = request.form.get("playlist_a_id")
-    playlist_b_list = request.form.getlist("playlist_b_id")
-
-    try:
-        sp = get_sp()
-        result = run_filter_sweep(sp, playlist_a, playlist_b_list)
-        track_samples = ", ".join(t.get("name") or "Unknown track" for t in result["removed_tracks"][:3])
-        extra = f" (e.g., {track_samples})" if track_samples else ""
-        flash(f"Filter Sweep complete, removed {result['removed']} track(s) from \"{result['playlist_name']}\"{extra}.")
-    except FilterSweepUserError as e:
-        flash(str(e))
-    except SpotifyException as e:
-        flash(f"Spotify error: {e}")
-    except Exception as e:
-        flash(f"Filter Sweep failed: {e}")
-
-    return redirect(url_for("misc.index"))
-
-
 @playlists_bp.route("/api/filter-sweep", methods=["POST"])
 def api_filter_sweep():
     if "token_info" not in session:
@@ -496,9 +449,11 @@ def api_filter_sweep():
     except FilterSweepUserError as e:
         return jsonify({"ok": False, "error": str(e), "code": getattr(e, "code", "user_error")}), getattr(e, "status_code", 400)
     except SpotifyException as e:
-        return jsonify({"ok": False, "error": "spotify_error", "details": str(e)}), 500
-    except Exception as e:
-        return jsonify({"ok": False, "error": "filter_sweep_failed", "details": str(e)}), 500
+        logger.error("Spotify error in filter-sweep: %s", e)
+        return jsonify({"ok": False, "error": "spotify_error"}), 500
+    except Exception:
+        logger.exception("Unexpected error in filter-sweep")
+        return jsonify({"ok": False, "error": "filter_sweep_failed"}), 500
 
 
 # ---------- Create playlist ----------
@@ -556,9 +511,11 @@ def api_create_playlist():
         })
 
     except SpotifyException as e:
-        return jsonify({"ok": False, "error": f"spotify_error:{e}"}), 500
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+        logger.error("Spotify error in create-playlist: %s", e)
+        return jsonify({"ok": False, "error": "spotify_error"}), 500
+    except Exception:
+        logger.exception("Unexpected error in create-playlist")
+        return jsonify({"ok": False, "error": "internal_error"}), 500
 
 
 # ---------- Internal helper ----------

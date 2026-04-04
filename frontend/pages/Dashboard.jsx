@@ -17,9 +17,9 @@ const TIME_RANGE_LABELS = {
 function Dashboard({ initialData }) {
   const [loading, setLoading] = useState(!initialData)
   const [statsData, setStatsData] = useState(initialData || null)
-  const [activeArtistRange, setActiveArtistRange] = useState('short_term')
-  const [activeTrackRange, setActiveTrackRange] = useState('short_term')
-  const [activeAlbumRange, setActiveAlbumRange] = useState('short_term')
+  const [activeArtistRange, setActiveArtistRange] = useState('long_term')
+  const [activeTrackRange, setActiveTrackRange] = useState('long_term')
+  const [activeAlbumRange, setActiveAlbumRange] = useState('long_term')
   const [activeGenreSource, setActiveGenreSource] = useState('tracks')
   const [activeGenreRange, setActiveGenreRange] = useState('long_term')
   const [showModal, setShowModal] = useState(false)
@@ -32,7 +32,7 @@ function Dashboard({ initialData }) {
       const availableRanges = Object.keys(initialData.top_artists || {})
       if (availableRanges.length > 0) {
         setRangeOptions(availableRanges)
-        const preferred = availableRanges.includes('short_term') ? 'short_term' : availableRanges[0]
+        const preferred = availableRanges.includes('long_term') ? 'long_term' : availableRanges[0]
         setActiveArtistRange(preferred)
         setActiveTrackRange(preferred)
         setActiveGenreRange(preferred)
@@ -59,7 +59,7 @@ function Dashboard({ initialData }) {
       const availableRanges = Object.keys(data.top_artists || {})
       if (availableRanges.length > 0) {
         setRangeOptions(availableRanges)
-        const preferred = availableRanges.includes('short_term') ? 'short_term' : availableRanges[0]
+        const preferred = availableRanges.includes('long_term') ? 'long_term' : availableRanges[0]
         setActiveArtistRange(preferred)
         setActiveTrackRange(preferred)
         setActiveGenreRange(preferred)

@@ -2,16 +2,32 @@ import { useState, useEffect } from 'react'
 import CustomSelect from '../ui/CustomSelect'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 
-// Color palette for pie chart slices
+// Pie chart slice colors — 500 shades, one per color family
 const COLORS = [
-  '#9B5DE5',
-  '#F15BB5',
-  '#FEE440',
-  '#00BBF9',
-  '#00F5D4',
-  '#9B5DE5',
-  '#F15BB5',
-  '#00BBF9',
+  '#6555aa', // dusty-grape-500
+  '#3887c7', // baltic-blue-500
+  '#06ccf9', // pacific-cyan-500
+  '#12edd0', // ocean-mist-500
+  '#17e89b', // emerald-500
+  '#3fd42b', // light-green-500
+  '#98db24', // lime-cream-500
+  '#e8e117', // banana-cream-500
+  '#ecae13', // tuscan-sun-500
+  '#ed8012', // sandy-brown-500
+]
+
+// Bar chart gradient tuples [light, dark, glow] — 400 → 600
+const BAR_GRADIENTS = [
+  ['#8477bb', '#514488', '#8477bb66'], // dusty-grape
+  ['#609fd2', '#2d6c9f', '#609fd266'], // baltic-blue
+  ['#38d6fa', '#05a3c7', '#38d6fa66'], // pacific-cyan
+  ['#41f1d9', '#0ebea6', '#41f1d966'], // ocean-mist
+  ['#45edaf', '#12ba7c', '#45edaf66'], // emerald
+  ['#65dc56', '#32a923', '#65dc5666'], // light-green
+  ['#ade250', '#7aaf1d', '#ade25066'], // lime-cream
+  ['#ede745', '#bab412', '#ede74566'], // banana-cream
+  ['#f0bf42', '#bd8c0f', '#f0bf4266'], // tuscan-sun
+  ['#f19941', '#be660e', '#f1994166'], // sandy-brown
 ]
 
 const CustomTooltip = ({ active, payload }) => {
@@ -240,9 +256,7 @@ function TopGenres({ genresData, activeSource, activeRange, rangeOptions, rangeL
           const displayPercentage = genre.percentage != null ? `${genre.percentage}%` : ''
 
           // Color gradient based on ranking
-          const hue = 250 - index * 10
-          const saturation = Math.max(70 - index * 3, 45)
-          const lightness = Math.min(55 + index * 2, 68)
+          const [colorLight, colorDark, colorGlow] = BAR_GRADIENTS[index % BAR_GRADIENTS.length]
 
           // Size-based hierarchy
           const baseHeight = 32
@@ -261,8 +275,8 @@ function TopGenres({ genresData, activeSource, activeRange, rangeOptions, rangeL
                   className="genre-bar-fill"
                   style={{
                     width: `${width}%`,
-                    background: `linear-gradient(90deg, hsl(${hue}, ${saturation}%, ${lightness}%) 0%, hsl(${hue}, ${saturation}%, ${lightness - 8}%) 100%)`,
-                    boxShadow: `0 0 20px hsla(${hue}, ${saturation}%, ${lightness}%, 0.4)`
+                    background: `linear-gradient(90deg, ${colorLight} 0%, ${colorDark} 100%)`,
+                    boxShadow: `0 0 20px ${colorGlow}`
                   }}
                 ></div>
               </div>

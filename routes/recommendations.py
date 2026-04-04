@@ -1,4 +1,8 @@
+import logging
+
 from flask import Blueprint, jsonify, request, session
+
+logger = logging.getLogger(__name__)
 from spotipy.exceptions import SpotifyException
 
 from spotify_client import get_sp
@@ -88,6 +92,8 @@ def api_recommendations():
                 "error": "spotify_seed_not_found",
                 "details": "One of your selected tracks or artists is no longer available for recommendations. Remove it and try again."
             }), 400
-        return jsonify({"ok": False, "error": f"spotify_error:{e}"}), 500
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+        logger.error("Spotify error in recommendations: %s", e)
+        return jsonify({"ok": False, "error": "spotify_error"}), 500
+    except Exception:
+        logger.exception("Unexpected error in recommendations")
+        return jsonify({"ok": False, "error": "internal_error"}), 500

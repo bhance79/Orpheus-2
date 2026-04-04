@@ -41,6 +41,14 @@ def normalize_seed_id(value: Any) -> Optional[str]:
     return token
 
 
+_SPOTIFY_ID_RE = re.compile(r'^[A-Za-z0-9]{22}$')
+
+
+def is_valid_spotify_id(value: Any) -> bool:
+    """Return True if value looks like a Spotify resource ID (22 base62 chars)."""
+    return bool(_SPOTIFY_ID_RE.match(str(value))) if value else False
+
+
 def dedupe_preserve_order(values: Iterable[str]) -> List[str]:
     seen: Set[str] = set()
     ordered: List[str] = []

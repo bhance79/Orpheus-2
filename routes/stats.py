@@ -1,9 +1,23 @@
+import logging
+import time
 from typing import Any, Dict, List
 
 import requests as http_requests
 import spotipy
 from flask import Blueprint, jsonify, request, session
 from spotipy.exceptions import SpotifyException
+
+logger = logging.getLogger(__name__)
+
+# ---------- In-process caches ----------
+_STATS_CACHE: Dict[str, Any] = {}   # {user_id: {"ts": float, "data": dict}}
+_STATS_TTL = 300                     # 5 minutes
+
+_ARTIST_CACHE: Dict[str, Any] = {}  # {artist_id: {"ts": float, "data": dict}}
+_ARTIST_TTL = 1800                   # 30 minutes
+
+_BIO_CACHE: Dict[str, Any] = {}     # {artist_id: {"ts": float, "bio": str|None, "source": str|None}}
+_BIO_TTL = 86400                     # 24 hours (bios don't change)
 
 from spotify_client import (
     TIME_RANGE_KEYS,
@@ -13,6 +27,7 @@ from spotify_client import (
     summarize_genres,
     summarize_genres_from_tracks,
 )
+from utils import is_valid_spotify_id
 
 stats_bp = Blueprint("stats", __name__)
 
@@ -25,9 +40,15 @@ def api_user_stats():
         sp = get_sp()
 
         user = sp.current_user()
+        user_id = user.get("id") or ""
         user_name = user.get("display_name", "User")
         user_images = user.get("images", [])
         user_image = user_images[0].get("url") if user_images else None
+
+        # Return cached stats if still fresh
+        cached = _STATS_CACHE.get(user_id)
+        if cached and (time.time() - cached["ts"]) < _STATS_TTL:
+            return jsonify(cached["data"])
 
         def format_artist(artist: Dict[str, Any]) -> Dict[str, Any]:
             images = artist.get("images") or []
@@ -145,7 +166,7 @@ def api_user_stats():
             })
         recent_minutes = round(recent_total_ms / 60000) if recent_total_ms else None
 
-        return jsonify({
+        payload = {
             "ok": True,
             "user": {"name": user_name, "image": user_image},
             "top_artists": top_artists,
@@ -155,12 +176,17 @@ def api_user_stats():
             "top_genres": top_genres,
             "top_albums": top_albums,
             "recent_minutes_listened": recent_minutes,
-        })
+        }
+        if user_id:
+            _STATS_CACHE[user_id] = {"ts": time.time(), "data": payload}
+        return jsonify(payload)
 
     except SpotifyException as e:
-        return jsonify({"ok": False, "error": f"spotify_error:{e}"}), 500
+        logger.error("Spotify error in user-stats: %s", e)
+        return jsonify({"ok": False, "error": "spotify_error"}), 500
     except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+        logger.exception("Unexpected error in user-stats")
+        return jsonify({"ok": False, "error": "internal_error"}), 500
 
 
 @stats_bp.route("/api/search")
@@ -240,15 +266,22 @@ def api_search():
         return jsonify({"ok": True, "results": items})
 
     except SpotifyException as e:
-        return jsonify({"ok": False, "error": f"spotify_error:{e}"}), 500
+        logger.error("Spotify error in search: %s", e)
+        return jsonify({"ok": False, "error": "spotify_error"}), 500
     except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+        logger.exception("Unexpected error in search")
+        return jsonify({"ok": False, "error": "internal_error"}), 500
 
 
 @stats_bp.route("/api/artists/<artist_id>")
 def api_artist_details(artist_id: str):
-    if not artist_id:
-        return jsonify({"ok": False, "error": "missing_artist_id"}), 400
+    if not is_valid_spotify_id(artist_id):
+        return jsonify({"ok": False, "error": "invalid_artist_id"}), 400
+
+    # Return cached artist if still fresh
+    cached = _ARTIST_CACHE.get(artist_id)
+    if cached and (time.time() - cached["ts"]) < _ARTIST_TTL:
+        return jsonify(cached["data"])
 
     try:
         sp = get_sp()
@@ -259,9 +292,10 @@ def api_artist_details(artist_id: str):
         artist = sp.artist(artist_id) or {}
     except SpotifyException as err:
         status = err.http_status or 500
-        return jsonify({"ok": False, "error": "spotify_artist_error", "details": err.msg}), status
-    except Exception as err:
-        return jsonify({"ok": False, "error": "artist_fetch_failed", "details": str(err)}), 500
+        return jsonify({"ok": False, "error": "spotify_artist_error"}), status
+    except Exception:
+        logger.exception("Unexpected error fetching artist %s", artist_id)
+        return jsonify({"ok": False, "error": "artist_fetch_failed"}), 500
 
     images = artist.get("images") or []
     genres = artist.get("genres") or []
@@ -299,7 +333,7 @@ def api_artist_details(artist_id: str):
     except Exception:
         pass
 
-    return jsonify({
+    payload = {
         "ok": True,
         "artist": {
             "id": artist.get("id") or artist_id,
@@ -312,18 +346,35 @@ def api_artist_details(artist_id: str):
             "top_tracks": top_tracks_list,
             "albums": albums_list,
         }
-    })
+    }
+    _ARTIST_CACHE[artist_id] = {"ts": time.time(), "data": payload}
+    return jsonify(payload)
 
 
 @stats_bp.route("/api/artists/<artist_id>/bio")
 def api_artist_bio(artist_id: str):
-    # Get artist name from Spotify first
-    try:
-        sp = get_sp()
-        artist = sp.artist(artist_id) or {}
-        artist_name = artist.get("name", "")
-    except Exception as err:
-        return jsonify({"ok": False, "error": str(err)}), 500
+    if not is_valid_spotify_id(artist_id):
+        return jsonify({"ok": False, "error": "invalid_artist_id"}), 400
+
+    # Return cached bio if still fresh (24h — bios rarely change)
+    cached = _BIO_CACHE.get(artist_id)
+    if cached and (time.time() - cached["ts"]) < _BIO_TTL:
+        return jsonify({"ok": True, "bio": cached["bio"], "source": cached["source"]})
+
+    # Resolve artist name — reuse artist detail cache if available
+    artist_name = ""
+    artist_cached = _ARTIST_CACHE.get(artist_id)
+    if artist_cached:
+        artist_name = (artist_cached["data"].get("artist") or {}).get("name", "")
+
+    if not artist_name:
+        try:
+            sp = get_sp()
+            artist = sp.artist(artist_id) or {}
+            artist_name = artist.get("name", "")
+        except Exception:
+            logger.exception("Error fetching artist name for bio: %s", artist_id)
+            return jsonify({"ok": False, "error": "internal_error"}), 500
 
     if not artist_name:
         return jsonify({"ok": False, "error": "artist_not_found"}), 404
@@ -334,8 +385,8 @@ def api_artist_bio(artist_id: str):
             "action": "query",
             "titles": artist_name,
             "prop": "extracts|info",
-            "exintro": True,       # intro section only (before first heading)
-            "explaintext": True,   # plain text, no wiki markup
+            "exintro": True,
+            "explaintext": True,
             "inprop": "url",
             "format": "json",
             "redirects": 1,
@@ -352,21 +403,22 @@ def api_artist_bio(artist_id: str):
         page = next(iter(pages.values()), {})
 
         if page.get("pageid") == -1 or not page.get("extract"):
+            _BIO_CACHE[artist_id] = {"ts": time.time(), "bio": None, "source": None}
             return jsonify({"ok": True, "bio": None, "source": None})
 
-        return jsonify({
-            "ok": True,
-            "bio": page["extract"].strip(),
-            "source": page.get("fullurl"),
-        })
-    except Exception as err:
-        return jsonify({"ok": False, "error": str(err)}), 500
+        bio = page["extract"].strip()
+        source = page.get("fullurl")
+        _BIO_CACHE[artist_id] = {"ts": time.time(), "bio": bio, "source": source}
+        return jsonify({"ok": True, "bio": bio, "source": source})
+    except Exception:
+        logger.exception("Error fetching Wikipedia bio for %s", artist_id)
+        return jsonify({"ok": False, "error": "bio_unavailable"}), 500
 
 
 @stats_bp.route("/api/albums/<album_id>")
 def api_album_details(album_id: str):
-    if not album_id:
-        return jsonify({"ok": False, "error": "missing_album_id"}), 400
+    if not is_valid_spotify_id(album_id):
+        return jsonify({"ok": False, "error": "invalid_album_id"}), 400
 
     try:
         sp = get_sp()
@@ -376,10 +428,12 @@ def api_album_details(album_id: str):
     try:
         album = sp.album(album_id) or {}
     except SpotifyException as err:
+        logger.error("Spotify error fetching album %s: %s", album_id, err)
         status = err.http_status or 500
-        return jsonify({"ok": False, "error": "spotify_album_error", "details": err.msg}), status
-    except Exception as err:
-        return jsonify({"ok": False, "error": "album_fetch_failed", "details": str(err)}), 500
+        return jsonify({"ok": False, "error": "spotify_album_error"}), status
+    except Exception:
+        logger.exception("Unexpected error fetching album %s", album_id)
+        return jsonify({"ok": False, "error": "album_fetch_failed"}), 500
 
     release_date = album.get("release_date") or ""
     release_year = release_date[:4] if isinstance(release_date, str) else None

@@ -28,7 +28,7 @@ function Layout({ children, user }) {
             <div className="navbar-left">
               {/* Logo/Brand */}
               <Link to="/" className="navbar-brand">
-                <img src="/static/icons/orpheusLogo.png" alt="Orpheus Logo" className="navbar-logo" />
+                <img src="/static/icons/orpheus-logo-header.png" alt="Orpheus Logo" className="navbar-logo" />
               </Link>
             </div>
 

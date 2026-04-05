@@ -2,7 +2,7 @@
 
 Filter Sweep removes tracks from one playlist that already exist in one or more other playlists â€” keeping your library distinct and free of overlap.
 
-![Filter Sweep](static/screenshots/FilterSweepUnchecked.PNG)
+![Filter Sweep](static/screenshots/FilterSweepPage.PNG)
 
 ---
 
@@ -19,7 +19,7 @@ Matching is done by **Spotify URI**, so only exact track versions are matched â€
 
 ## Example Workflow
 
-![Selected playlists](static/screenshots/FilterSweep.PNG)
+![Selected playlists](static/screenshots/FilterSweepPageChecked.PNG)
 
 Here's how Filter Sweep fits into a real curation workflow:
 
@@ -47,9 +47,6 @@ This turns a weekly inbox of 30 recommendations into a manageable, self-maintain
 ---
 
 ## Results
-
-![Results Sweeped](static/screenshots/FilterSweepSuccess.PNG)
-
 After the sweep runs, a summary is displayed showing:
 
 - How many tracks were removed from Playlist A

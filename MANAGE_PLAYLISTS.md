@@ -10,11 +10,11 @@ Playlists load in two views — switch between them at any time.
 
 **Grid View** — thumbnail layout, good for visual browsing.
 
-![Grid View](static/screenshots/ManagePlaylistsGridView.PNG)
+![Grid View](static/screenshots/ManagePlaylistsPageGridView.PNG)
 
 **List View** — compact rows with more metadata at a glance.
 
-![List View](static/screenshots/ManagePlaylistsListView.PNG)
+![List View](static/screenshots/ManagePlaylistsPageListView.PNG)
 
 ### Search & Filter
 
@@ -26,7 +26,7 @@ Type in the search bar to filter playlists by name in real time.
 
 Click any playlist to open its full track list. Large playlists load in the background in batches of 100.
 
-![Playlist view](static/screenshots/ManagePlaylistsPlaylistView.PNG)
+![Playlist view](static/screenshots/ManagePlaylistTracklist.PNG)
 
 Sorting options inside a playlist:
 - Custom order (default)
@@ -42,6 +42,8 @@ Sorting options inside a playlist:
 Detects and removes duplicate tracks from any playlist you own.
 
 ![Check Duplicates](static/screenshots/DuplicateCheckFound.PNG)
+
+![Duplicates Removed](static/screenshots/DuplicateCheckFoundRemoved.PNG)
 
 ### How Duplicates Are Detected
 

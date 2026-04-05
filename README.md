@@ -45,7 +45,7 @@ Crate Digger was a music discovery tool powered by Spotify's recommendations end
 
 **Manage Playlists**
 
-![Playlists](static/screenshots/ManagePlaylistsGridView.PNG)
+![Playlists](static/screenshots/ManagePlaylistsPageGridView.PNG)
 <div align="right">
 
 [See more](MANAGE_PLAYLISTS.md)
@@ -54,7 +54,7 @@ Crate Digger was a music discovery tool powered by Spotify's recommendations end
 
 **Filter Sweep**
 
-![Filter Sweep](static/screenshots/FilterSweep.PNG)
+![Filter Sweep](static/screenshots/FilterSweepPage.PNG)
 <div align="right">
 
 [See more](FILTER_SWEEP.md)
